@@ -1,0 +1,43 @@
+# Publishes to npm when a version tag is pushed, via npm trusted publishing (OIDC): no npm token is
+# stored anywhere, and every release carries a provenance statement linking it to this workflow.
+#
+# One-time setup on npmjs.com: package settings → Trusted publisher → GitHub Actions,
+# repository DrFritzi/schemacase, workflow release.yml, environment npm.
+name: release
+
+on:
+  push:
+    tags: ["v*.*.*"]
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: npm
+    permissions:
+      contents: write # moves the major tag (v0, v1, …) that the GitHub Action is used by
+      id-token: write # trusted publishing and provenance
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+      # Trusted publishing needs npm 11.5.1 or later.
+      - run: npm install -g npm@latest
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm quicktest
+      - name: Tag matches package.json
+        run: |
+          version="$(node -p 'require("./package.json").version')"
+          test "v$version" = "$GITHUB_REF_NAME" || { echo "tag $GITHUB_REF_NAME, package.json $version"; exit 1; }
+      - run: npm publish
+      - name: Move the major tag
+        run: |
+          major="${GITHUB_REF_NAME%%.*}"
+          git tag -f "$major" "$GITHUB_SHA"
+          git push -f origin "refs/tags/$major"

@@ -2,6 +2,28 @@
   "name": "schemacase",
   "version": "0.1.0",
   "description": "Every column makes its case: render a data-model spec as one self-contained HTML page, with unexplained columns listed as schema debt.",
+  "keywords": [
+    "data-model",
+    "schema",
+    "erd",
+    "documentation",
+    "database",
+    "postgres",
+    "prisma",
+    "graphviz",
+    "schema-review",
+    "cli"
+  ],
+  "homepage": "https://github.com/DrFritzi/schemacase#readme",
+  "bugs": {
+    "url": "https://github.com/DrFritzi/schemacase/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DrFritzi/schemacase.git"
+  },
+  "license": "MIT",
+  "author": "DrFritzi",
   "type": "module",
   "bin": {
     "schemacase": "src/cli.mjs"
@@ -10,10 +32,13 @@
     ".": "./src/render.mjs",
     "./spec": "./src/spec.mjs",
     "./import/postgres": "./src/import/postgres.mjs",
-    "./import/prisma": "./src/import/prisma.mjs"
+    "./import/prisma": "./src/import/prisma.mjs",
+    "./schema.json": "./schema/schemacase.schema.json",
+    "./package.json": "./package.json"
   },
   "files": [
-    "src"
+    "src",
+    "schema"
   ],
   "scripts": {
     "lint": "eslint . --max-warnings=0",
@@ -21,17 +46,6 @@
     "quicktest": "pnpm run lint && pnpm test",
     "example": "node src/cli.mjs example/shop.json -o example/shop.html"
   },
-  "devDependencies": {
-    "@eslint/js": "^9.39.5",
-    "eslint": "^9.39.5",
-    "globals": "^17.11.0",
-    "pg": "^8.23.0"
-  },
-  "engines": {
-    "node": ">=22",
-    "pnpm": ">=11"
-  },
-  "packageManager": "pnpm@11.14.0",
   "dependencies": {
     "@viz-js/viz": "^3.29.0",
     "svg-pan-zoom": "^3.6.2"
@@ -43,5 +57,20 @@
     "pg": {
       "optional": true
     }
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "ajv": "^8.20.0",
+    "eslint": "^9.39.5",
+    "globals": "^17.11.0",
+    "pg": "^8.23.0"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "packageManager": "pnpm@11.14.0",
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
   }
 }

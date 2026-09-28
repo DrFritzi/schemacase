@@ -1,4 +1,5 @@
 {
+  "$schema": "../schema/schemacase.schema.json",
   "schemacase": 1,
   "title": "Orders",
   "collectionsLabel": "tables",

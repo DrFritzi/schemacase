@@ -223,6 +223,17 @@ empty one.
 Outputs: `changed`, `unaccounted` (a count), `review-file` (the Markdown). The review also goes to
 the job summary. The action runs on the runner's own Node and installs nothing.
 
+## Editor support
+
+The spec format has a JSON Schema, shipped in the package. Point `$schema` at it and editors
+complete keys and flag typos:
+
+```json
+{ "$schema": "./node_modules/schemacase/schema/schemacase.schema.json", "schemacase": 1, "collections": [] }
+```
+
+or, without installing, `https://unpkg.com/schemacase/schema/schemacase.schema.json`.
+
 ## Develop
 
 ```bash

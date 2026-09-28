@@ -1,0 +1,152 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://unpkg.com/schemacase/schema/schemacase.schema.json",
+  "title": "schemacase spec",
+  "description": "A data model to render as one page: collections with the case for every column, links, operations, groups, systems and flows. A proposal is the same shape plus a `changes` list.",
+  "type": "object",
+  "required": ["schemacase", "collections"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "schemacase": { "const": 1, "description": "Spec format version." },
+    "title": { "type": "string", "description": "The window's name and the first line of the rail." },
+    "collectionsLabel": { "type": "string", "description": "What to call collections on the page, e.g. \"tables\"." },
+    "operationsLabel": { "type": "string", "description": "What to call operations on the page, e.g. \"endpoints\"." },
+    "collections": { "type": "array", "items": { "$ref": "#/$defs/collection" } },
+    "links": { "type": "array", "items": { "$ref": "#/$defs/link" } },
+    "operations": { "type": "array", "items": { "$ref": "#/$defs/operation" } },
+    "groups": { "type": "array", "items": { "$ref": "#/$defs/group" } },
+    "systems": { "type": "array", "items": { "$ref": "#/$defs/system" } },
+    "flows": { "type": "array", "items": { "$ref": "#/$defs/flow" } },
+    "fieldNotes": {
+      "type": "object",
+      "description": "The case for a column, stated once. Keys are \"collection.field\" or \"*.field\"; the exact key wins, and the field's own why/usedBy win over both.",
+      "propertyNames": { "pattern": "^[^.]+\\..+$" },
+      "additionalProperties": { "$ref": "#/$defs/case" }
+    },
+    "changes": {
+      "type": "array",
+      "description": "In a proposal: one entry per decision, each accounting for part of the diff.",
+      "items": { "$ref": "#/$defs/change" }
+    }
+  },
+  "$defs": {
+    "names": { "type": "array", "items": { "type": "string" } },
+    "case": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "why": { "type": "string", "description": "Why the value is kept at all, and in this shape." },
+        "usedBy": { "$ref": "#/$defs/names", "description": "The requirements that need it." }
+      }
+    },
+    "field": {
+      "type": "object",
+      "required": ["name"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "type": { "type": "string" },
+        "key": { "type": "boolean", "description": "Part of the primary key." },
+        "required": { "type": "boolean" },
+        "document": { "type": "boolean", "description": "Holds a nested document (json, jsonb, …)." },
+        "why": { "type": "string", "description": "Why the value is kept at all, and in this shape. Empty means unjustified." },
+        "usedBy": { "$ref": "#/$defs/names", "description": "The requirements that need it. Empty means unjustified." }
+      }
+    },
+    "collection": {
+      "type": "object",
+      "required": ["name"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "fields": { "type": "array", "items": { "$ref": "#/$defs/field" } }
+      }
+    },
+    "link": {
+      "type": "object",
+      "required": ["from", "to"],
+      "additionalProperties": false,
+      "properties": {
+        "from": { "type": "string", "description": "The referenced (parent) collection." },
+        "to": { "type": "string", "description": "The collection holding the foreign key." },
+        "via": { "type": "string", "description": "The foreign-key column(s) in `to`, comma-separated." },
+        "strong": { "type": "boolean", "description": "The child does not outlive its parent." },
+        "optional": { "type": "boolean", "description": "The child may exist without a parent." }
+      }
+    },
+    "operation": {
+      "type": "object",
+      "required": ["name"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "summary": { "type": "string" },
+        "inputs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name"],
+            "additionalProperties": false,
+            "properties": {
+              "name": { "type": "string", "minLength": 1 },
+              "type": { "type": "string" },
+              "required": { "type": "boolean" }
+            }
+          }
+        }
+      }
+    },
+    "group": {
+      "type": "object",
+      "required": ["name"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "blurb": { "type": "string" },
+        "collections": { "$ref": "#/$defs/names" },
+        "operations": { "$ref": "#/$defs/names" }
+      }
+    },
+    "system": {
+      "type": "object",
+      "required": ["name"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "kind": { "enum": ["external", "internal", "store"] },
+        "blurb": { "type": "string" }
+      }
+    },
+    "flow": {
+      "type": "object",
+      "required": ["from", "to"],
+      "additionalProperties": false,
+      "properties": {
+        "from": { "type": "string", "description": "A system, a group or a collection." },
+        "to": { "type": "string", "description": "A system, a group or a collection." },
+        "label": { "type": "string" }
+      }
+    },
+    "change": {
+      "type": "object",
+      "required": ["id", "title"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "description": "Short and stable, so a review can answer \"P1 yes\"." },
+        "title": { "type": "string" },
+        "why": { "type": "string" },
+        "cost": { "type": "string" },
+        "affects": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "collections": { "$ref": "#/$defs/names" },
+            "fields": { "type": "array", "items": { "type": "string", "pattern": "^[^.]+\\..+$" } },
+            "operations": { "$ref": "#/$defs/names" }
+          }
+        }
+      }
+    }
+  }
+}
