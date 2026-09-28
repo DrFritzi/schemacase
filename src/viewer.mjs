@@ -152,6 +152,18 @@ const NAVIGATION = `
     draw();
   }
 
+  // Opening the panel narrows the canvas, so a node near the right edge can end up behind it:
+  // when that happens, bring the node to the middle, at the zoom the reader chose.
+  function reveal(el) {
+    const box = boxInRoot(el), r = size();
+    const w = fitWidth(r) / zoom, h = w * r.height / r.width;
+    const inside = box.x >= cx - w / 2 && box.x + box.width <= cx + w / 2 &&
+      box.y >= cy - h / 2 && box.y + box.height <= cy + h / 2;
+    if (inside) return;
+    cx = box.x + box.width / 2; cy = box.y + box.height / 2;
+    draw();
+  }
+
   // One finger or the mouse pans, two fingers pinch, the wheel zooms. A drag that ends on a node
   // is not a click on it.
   function wireCanvas() {
@@ -198,6 +210,7 @@ const NAVIGATION = `
         if (node.id.startsWith("t_")) showTable(node.id.slice(2));
         else if (node.id.startsWith("o_")) showOperation(node.id.slice(2));
         else showSystem(Number(node.id.slice(1)));
+        reveal(node);
       });
     }
     wireCanvas();

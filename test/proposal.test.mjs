@@ -101,3 +101,35 @@ test("field notes justify the proposed model too", async () => {
   const shipTo = spec.collections.find((c) => c.name === "orders").fields.find((f) => f.name === "ship_to");
   assert.equal(shipTo.why, "One line on the delivery note.");
 });
+
+test("a change that lists columns owns a relationship only through its foreign-key column", async () => {
+  const before = {
+    schemacase: 1,
+    collections: [
+      { name: "a", fields: [{ name: "id", key: true }] },
+      { name: "b", fields: [{ name: "id", key: true }, { name: "a_id" }, { name: "y" }] },
+    ],
+    links: [{ from: "a", to: "b", via: "a_id" }],
+  };
+  const after = structuredClone(before);
+  after.collections[1].fields = [{ name: "id", key: true }];
+  after.links = [];
+  const card = (html, id) => html.split(`id="${id}"`)[1].split("</article>")[0];
+  const review = (affects) => renderHtml(before, { ...after, changes: [{ id: "P1", title: "t", affects }] });
+
+  const dropsY = card(await review({ collections: ["b"], fields: ["b.y", "b.a_id"] }), "P1");
+  assert.match(dropsY, /a → b/, "the change that drops the foreign-key column owns the relationship");
+
+  const other = await renderHtml(before, {
+    ...after,
+    changes: [
+      { id: "P1", title: "t", affects: { collections: ["b"], fields: ["b.y"] } },
+      { id: "P2", title: "u", affects: { collections: ["b"], fields: ["b.a_id"] } },
+    ],
+  });
+  assert.equal(card(other, "P1").includes("relationship"), false, "P1 only drops y");
+  assert.match(card(other, "P2"), /1 relationship\b/, "P2 owns it, and the count is not plural");
+
+  const whole = card(await review({ collections: ["b"] }), "P1");
+  assert.match(whole, /a → b/, "a change that names only the collection still gets its relationships");
+});

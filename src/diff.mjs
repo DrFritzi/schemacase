@@ -109,9 +109,15 @@ export function slice(diff, affects = {}) {
       .map(keepFields)
       .filter((c) => c.status !== "changed" || c.fields.length),
     operations: diff.operations.filter((o) => operations.has(o.name)),
-    links: diff.links.filter(
-      (l) => collections.has(l.from?.from ?? l.to?.from) || collections.has(l.from?.to ?? l.to?.to)
-    ),
+    links: diff.links.filter((entry) => {
+      // The link as it was, or as it will be if it is new. `from` is the parent, `to` the child
+      // that holds the foreign key in the columns named by `via`.
+      const link = entry.from ?? entry.to;
+      if (!fields.size) return collections.has(link.from) || collections.has(link.to);
+      // Like the fields above: a change that lists columns owns a link only through its own
+      // foreign-key column, not through every collection it happens to touch.
+      return String(link.via).split(",").some((column) => fields.has(`${link.to}.${column.trim()}`));
+    }),
   };
 }
 
