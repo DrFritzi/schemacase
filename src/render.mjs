@@ -58,6 +58,7 @@ export async function renderHtml(input, proposedInput = null) {
 <html lang="en"><head><meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>${esc(spec.title)}</title>
+<script>try{var t=localStorage.getItem("schemacase-theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}</script>
 <style>${STYLE}</style></head>
 <body>
   <div class="viewer">
@@ -76,6 +77,7 @@ export async function renderHtml(input, proposedInput = null) {
         )
         .join("")}
       ${proposals ? '<button type="button" id="show-proposals" class="jump proposals-open">Proposals</button>' : ""}
+      <button type="button" id="theme" class="tool" aria-label="colour theme"></button>
     </nav>
     <div class="canvas" id="canvas">${graph}</div>
     <aside class="detail" id="detail" hidden></aside>

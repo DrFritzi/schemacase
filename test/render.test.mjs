@@ -84,7 +84,8 @@ test("escapes what it writes into the page", async () => {
     collectionsLabel: "<b>Tables</b>",
     collections: [{ name: "t", fields: [{ name: "c", type: "text" }] }],
   });
-  const page = html.split("<script>")[0];
+  // Only the markup: what the scripts say is tested where they are.
+  const page = html.split("<script>").map((part, i) => (i ? part.slice(part.indexOf("</script>") + 9) : part)).join("");
   assert.equal(page.includes("<b>Tables</b>"), false);
   assert.match(page, /&lt;\/title&gt;/);
   assert.match(page, /&lt;b&gt;Tables&lt;\/b&gt;/);

@@ -6,8 +6,14 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- An optional dark theme. The **theme** button in the rail cycles auto (follow the system), light and dark, and the choice is remembered. The diagram follows the theme too.
+- Pointing at a table or a system brightens its own lines and fades the rest; clicking keeps them lit while the panel is open.
+
 ### Changed
 
+- Foreign keys are drawn from the parent to the child, out of the parent's right edge and into the child's left, instead of looping round both tables. Flows are thinner and softer, and come forward when you point at what they belong to.
 - Pan and zoom are built in instead of coming from the `svg-pan-zoom` library. Pages are about 40% smaller (70 KB to 42 KB) and the package has one runtime dependency, Graphviz. Wheel, drag, pinch, the zoom buttons and the rail behave as before; the view now also follows the canvas when the detail panel opens or closes.
 - Flows are drawn without taking part in the layout, which is left to the foreign keys.
 - The command line rejects a flag it does not know instead of taking it for a file name.
@@ -15,6 +21,7 @@ All notable changes to this project are documented here. The format follows
 
 ### Fixed
 
+- A table whose name has a space or a dash (any name that is not plain letters and digits) did not open its panel when clicked.
 - A column without a `type` made Graphviz reject the whole table, so it silently vanished from the diagram. `type` is optional in the format; importers always set it, which is why this went unseen.
 - Only the text and borders of a table were clickable; a click in the middle of a cell fell through to the area behind it.
 - A table clicked near the edge is brought into view instead of ending up behind the detail panel.
