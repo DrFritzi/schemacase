@@ -155,6 +155,13 @@ const NAVIGATION = `
 `;
 
 /**
+ * JSON for a `<script>` body. Spec text is untrusted, and a `</script>` inside a string would end
+ * the script element early and let the rest run as page markup; `\u003c` is the same character
+ * to JavaScript and nothing to the HTML parser.
+ */
+const json = (value) => JSON.stringify(value).replace(/</g, "\\u003c");
+
+/**
  * The rail's buttons carry their target in a data attribute, so this needs the spec only — it
  * reads the jump targets off the page it is already in.
  *
@@ -162,7 +169,7 @@ const NAVIGATION = `
  */
 export const viewerScript = (spec) => `
 (() => {
-  const SPEC = ${JSON.stringify({
+  const SPEC = ${json({
     collections: spec.collections,
     links: spec.links,
     operations: spec.operations,

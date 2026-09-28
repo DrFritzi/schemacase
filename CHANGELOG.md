@@ -6,6 +6,10 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- A `</script>` inside any spec text (a column's `why`, a system's blurb, …) ended the page script early and ran the rest as markup. The embedded spec is now escaped so it cannot leave its script element.
+
 ## [0.1.0]
 
 First public release.

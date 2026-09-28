@@ -130,3 +130,19 @@ test("the output path defaults to the spec's name", async () => {
   assert.equal(parseArgs(["a.json", "--proposal", "p.json"]).proposal, "p.json");
   assert.throws(() => parseArgs([]), /usage:/);
 });
+
+test("spec text cannot end the page script and run as markup", async () => {
+  const payload = "</script><img src=x onerror=alert(1)>";
+  const html = await renderHtml({
+    schemacase: 1,
+    title: payload,
+    collections: [{ name: payload, fields: [{ name: "c", type: "text", why: payload, usedBy: [payload] }] }],
+    operations: [{ name: payload, summary: payload, inputs: [{ name: payload, type: payload }] }],
+    systems: [{ name: payload, blurb: payload }],
+  });
+  assert.equal(html.includes(payload), false, "the payload must not appear verbatim anywhere");
+  // Counted by splitting rather than a regexp: this is a check on our own output, not a filter.
+  const opened = html.split("<script>").length - 1;
+  const closed = html.split("</script>").length - 1;
+  assert.equal(closed, opened, "no script element may be closed early");
+});
