@@ -32,6 +32,8 @@ const COLORS = {
   area: "#f7f9fb",
 };
 
+// Graphviz rejects a label with an empty <FONT>, and then draws no table at all, so a cell that may
+// be empty (a column without a type, a row without marks) always holds at least a space.
 function fieldRow(field, foreign) {
   const marks = [field.key ? "PK" : "", foreign.has(field.name) ? "FK" : ""].filter(Boolean).join(",");
   const bg = field.document ? ` BGCOLOR="${COLORS.doc}"` : "";
@@ -41,7 +43,7 @@ function fieldRow(field, foreign) {
     `<FONT COLOR="${COLORS.accent}" POINT-SIZE="9">${esc(marks || " ")}</FONT></TD>` +
     `<TD ALIGN="LEFT"${bg}><FONT COLOR="${nameColor}">${esc(field.name)}` +
     `${isUnjustified(field) ? ` <FONT COLOR="${COLORS.warn}">?</FONT>` : ""}</FONT></TD>` +
-    `<TD ALIGN="LEFT"${bg}><FONT COLOR="${COLORS.muted}" POINT-SIZE="9">${esc(field.type)}</FONT></TD></TR>`
+    `<TD ALIGN="LEFT"${bg}><FONT COLOR="${COLORS.muted}" POINT-SIZE="9">${esc(field.type || " ")}</FONT></TD></TR>`
   );
 }
 

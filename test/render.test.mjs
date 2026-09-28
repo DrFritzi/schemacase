@@ -152,3 +152,14 @@ test("every script in the page is valid JavaScript", async () => {
   assert.ok(scripts.length > 0);
   for (const code of scripts) assert.doesNotThrow(() => new Script(code));
 });
+
+test("a column without a type still gets its table drawn", async () => {
+  // type is optional in the format, and an empty label cell used to make Graphviz drop the table.
+  const html = await renderHtml({
+    schemacase: 1,
+    collections: [{ name: "t", fields: [{ name: "id", key: true }, { name: "note" }] }],
+  });
+  const table = html.split('id="t_t"')[1].split("</g>")[0];
+  assert.match(table, /<polygon/, "the table has cells");
+  assert.match(table, />note\s*</, "and its columns are on it");
+});

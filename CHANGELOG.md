@@ -15,6 +15,7 @@ All notable changes to this project are documented here. The format follows
 
 ### Fixed
 
+- A column without a `type` made Graphviz reject the whole table, so it silently vanished from the diagram. `type` is optional in the format; importers always set it, which is why this went unseen.
 - Only the text and borders of a table were clickable; a click in the middle of a cell fell through to the area behind it.
 - A table clicked near the edge is brought into view instead of ending up behind the detail panel.
 - A proposal card listed a removed relationship that belonged to another change. A change that lists columns now owns a relationship through its foreign-key column only.
