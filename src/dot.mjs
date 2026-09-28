@@ -17,6 +17,8 @@ import { isUnjustified } from "./spec.mjs";
 const plain = (prefix) => (name) => `${prefix}_${String(name).replace(/[^A-Za-z0-9_]/g, "_")}`;
 export const tableId = plain("t");
 export const portId = plain("p");
+/** The same row's last cell: its east side is the table's right edge, where a key leaves. */
+export const endPortId = plain("q");
 export const opId = plain("o");
 export const areaId = (i) => `g${i}`;
 export const sysId = (i) => `s${i}`;
@@ -43,7 +45,8 @@ function fieldRow(field, foreign) {
     `<FONT COLOR="${COLORS.accent}" POINT-SIZE="9">${esc(marks || " ")}</FONT></TD>` +
     `<TD ALIGN="LEFT"${bg}><FONT COLOR="${nameColor}">${esc(field.name)}` +
     `${isUnjustified(field) ? ` <FONT COLOR="${COLORS.warn}">?</FONT>` : ""}</FONT></TD>` +
-    `<TD ALIGN="LEFT"${bg}><FONT COLOR="${COLORS.muted}" POINT-SIZE="9">${esc(field.type || " ")}</FONT></TD></TR>`
+    `<TD PORT="${endPortId(field.name)}" ALIGN="LEFT"${bg}>` +
+    `<FONT COLOR="${COLORS.muted}" POINT-SIZE="9">${esc(field.type || " ")}</FONT></TD></TR>`
   );
 }
 
@@ -75,7 +78,7 @@ function foreignColumns(links) {
  * every composite key in a multi-tenant schema starts with it, so anchoring on it would draw the
  * same line many times into one row.
  */
-function edgeFor(link, byName) {
+function edgeFor(link, byName, index) {
   const child = byName.get(link.to);
   const parent = byName.get(link.from);
   if (!child || !parent) return "";
@@ -86,12 +89,14 @@ function edgeFor(link, byName) {
   const column = columns.find((c) => c !== "project_id") ?? columns[0];
   const parentKey = parent.fields.find((f) => f.key && f.name !== "project_id") ?? parent.fields[0];
   if (!column || !parentKey) return "";
-  // crow at the child (many), bar at the parent (exactly one), circle too where it may be absent.
-  const head = link.optional ? "odottee" : "tee";
+  // Drawn parent to child, out of the parent's right edge and into the child's left, which is the
+  // way the layout runs: the other way round every line had to loop around both tables. Bar at
+  // the parent (exactly one, or with a circle where it may be absent), crow's foot at the child.
+  const one = link.optional ? "odottee" : "tee";
   const style = link.strong ? `color="${COLORS.accent}"` : `color="${COLORS.muted}"`;
   return (
-    `  ${tableId(link.to)}:${portId(column)}:w -> ${tableId(link.from)}:${portId(parentKey.name)}:e ` +
-    `[dir=both, arrowtail=crow, arrowhead=${head}, ${style}];`
+    `  ${tableId(link.from)}:${endPortId(parentKey.name)}:e -> ${tableId(link.to)}:${portId(column)}:w ` +
+    `[id="l${index}", dir=both, arrowtail=${one}, arrowhead=crow, ${style}];`
   );
 }
 
@@ -176,25 +181,25 @@ export function toDot(spec) {
   });
 
   const byName = new Map(spec.collections.map((c) => [c.name, c]));
-  for (const link of spec.links) {
-    const edge = edgeFor(link, byName);
+  spec.links.forEach((link, i) => {
+    const edge = edgeFor(link, byName, i);
     if (edge) out.push(edge);
-  }
+  });
 
   const targets = flowTargets(spec);
-  for (const flow of spec.flows) {
+  spec.flows.forEach((flow, i) => {
     const from = targets.get(flow.from);
     const to = targets.get(flow.to);
-    if (!from || !to) continue;
+    if (!from || !to) return;
     const ends = [
       from.cluster ? `ltail=${from.cluster}` : "",
       to.cluster ? `lhead=${to.cluster}` : "",
     ].filter(Boolean).join(", ");
     out.push(
-      `  ${from.node} -> ${to.node} [label="${esc(flow.label)}", style=dashed, constraint=false, ` +
+      `  ${from.node} -> ${to.node} [id="f${i}", label="${esc(flow.label)}", style=dashed, constraint=false, ` +
         `color="${COLORS.warn}", fontcolor="${COLORS.warn}", penwidth=1.2${ends ? ", " + ends : ""}];`
     );
-  }
+  });
 
   out.push("}");
   return out.join("\n");
