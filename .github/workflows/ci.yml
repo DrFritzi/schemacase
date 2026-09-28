@@ -1,0 +1,77 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: node ${{ matrix.node }} · ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        node: [22, 24]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm test
+      - run: pnpm example
+      # The CLI once exited 0 without doing anything; make sure the page really exists.
+      - run: node -e "if (!require('fs').statSync('example/shop.html').size) process.exit(1)"
+
+  postgres:
+    name: postgres importer, live
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      SCHEMACASE_TEST_PG: postgres://postgres:postgres@localhost:5432/postgres
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Create a schema to import
+        run: |
+          psql "$SCHEMACASE_TEST_PG" -v ON_ERROR_STOP=1 <<'SQL'
+          create table customers (id uuid primary key, email text not null, prefs jsonb);
+          create table orders (id uuid primary key,
+            customer_id uuid references customers(id) on delete cascade, placed_at timestamptz not null);
+          SQL
+      - run: node --test test/import.test.mjs
+      - run: node src/cli.mjs import postgres "$SCHEMACASE_TEST_PG" -o model.json && node src/cli.mjs model.json
+
+  pack:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: The packed package installs and runs through its bin
+        run: |
+          npm pack
+          mkdir -p ../consumer && cd ../consumer && npm init -y >/dev/null
+          npm install "$GITHUB_WORKSPACE"/schemacase-*.tgz
+          cp "$GITHUB_WORKSPACE/example/shop.json" . && npx schemacase shop.json && test -s shop.html

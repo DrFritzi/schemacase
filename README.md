@@ -1,5 +1,7 @@
 # schemacase
 
+[![npm](https://img.shields.io/npm/v/schemacase)](https://www.npmjs.com/package/schemacase) [![ci](https://github.com/DrFritzi/schemacase/actions/workflows/ci.yml/badge.svg)](https://github.com/DrFritzi/schemacase/actions/workflows/ci.yml) [![license: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+
 *Every column makes its case.*
 
 **[Live demo](https://drfritzi.github.io/schemacase/)**, rendered from [`example/shop.json`](example/shop.json).
@@ -241,3 +243,9 @@ pnpm install
 pnpm quicktest     # lint + tests, a few seconds
 pnpm example       # render example/shop.json
 ```
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for how the code is written and how releases work.
+
+## License
+
+[MIT](LICENSE) © DrFritzi

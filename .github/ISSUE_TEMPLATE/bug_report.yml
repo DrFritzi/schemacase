@@ -1,0 +1,28 @@
+name: Bug report
+description: Something renders wrong, crashes, or imports incorrectly.
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: spec
+    attributes:
+      label: Smallest spec (or schema) that shows it
+      description: Please strip anything private.
+      render: json
+  - type: input
+    id: command
+    attributes:
+      label: Command
+      placeholder: npx schemacase docs/model.json
+  - type: input
+    id: versions
+    attributes:
+      label: Versions
+      placeholder: schemacase 0.1.0, Node 22.x, macOS
+    validations:
+      required: true
