@@ -1,0 +1,38 @@
+{
+  "name": "dataplaner",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Renders a data-model spec as one self-contained HTML page.",
+  "bin": {
+    "dataplaner": "src/cli.mjs"
+  },
+  "exports": {
+    ".": "./src/render.mjs",
+    "./spec": "./src/spec.mjs"
+  },
+  "files": [
+    "src"
+  ],
+  "scripts": {
+    "lint": "eslint . --max-warnings=0",
+    "test": "node --test \"test/*.test.mjs\"",
+    "quicktest": "pnpm run lint && pnpm test",
+    "example": "node src/cli.mjs example/shop.json -o example/shop.html"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "eslint": "^9.39.5",
+    "globals": "^17.11.0"
+  },
+  "engines": {
+    "node": ">=22",
+    "pnpm": ">=11"
+  },
+  "packageManager": "pnpm@11.14.0",
+  "dependencies": {
+    "@viz-js/viz": "^3.29.0",
+    "mermaid": "^11.17.0",
+    "svg-pan-zoom": "^3.6.2"
+  }
+}
