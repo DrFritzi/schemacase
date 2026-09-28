@@ -3,12 +3,12 @@ import assert from "node:assert/strict";
 import { normalizeSpec, SPEC_VERSION } from "../src/spec.mjs";
 
 const minimal = () => ({
-  dataplaner: SPEC_VERSION,
+  schemacase: SPEC_VERSION,
   collections: [{ name: "a", fields: [{ name: "id", type: "text", key: true, required: true }] }],
 });
 
 test("rejects a spec from a version it cannot read", () => {
-  assert.throws(() => normalizeSpec({ ...minimal(), dataplaner: 2 }), /unsupported version 2/);
+  assert.throws(() => normalizeSpec({ ...minimal(), schemacase: 2 }), /unsupported version 2/);
   assert.throws(() => normalizeSpec({ collections: [] }), /unsupported version undefined/);
 });
 

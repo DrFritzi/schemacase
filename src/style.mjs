@@ -53,7 +53,6 @@ export const STYLE = `
   .rail .internal{border-left:3px solid var(--muted)}
   .canvas{grid-area:canvas;overflow:hidden;position:relative;min-height:0;cursor:grab}
   .canvas:active{cursor:grabbing}
-  .canvas .mermaid{margin:0;height:100%}
   .canvas svg{display:block;width:100%;height:100%}
   .detail{grid-area:detail;border-top:1px solid var(--line);padding:14px 16px;overflow:auto;
     background:var(--paper);font-size:13px}

@@ -3,7 +3,7 @@
  * would do to the model.
  *
  * The page is static — there is no server to record a verdict — so every card carries a short,
- * stable id. Reviewing is then a sentence: "P1 ja, P3 nein". That is deliberately lower-tech than
+ * stable id. Reviewing is then a sentence: "P1 yes, P3 no". That is deliberately lower-tech than
  * a form, and it works in a file you can mail to someone.
  */
 import { diffSpecs, slice, unaccounted } from "./diff.mjs";

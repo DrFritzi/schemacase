@@ -16,9 +16,9 @@ test("the page says what the spec says, not what the renderer thinks", async () 
   assert.match(html, /4 tables · 3 relationships · 3 endpoints/);
 });
 
-test("carries no trace of the project it was extracted from", async () => {
+test("carries no trace of any particular project or stack", async () => {
   const html = (await renderHtml(shop())).toLowerCase();
-  for (const word of ["acme", "postgres", "mcp", "npm run data-model"]) {
+  for (const word of ["acme", "postgres", "prisma", "npm run"]) {
     assert.equal(html.includes(word), false, `renderer leaks "${word}"`);
   }
 });
@@ -79,21 +79,21 @@ test("a collection nobody placed still appears, in its own cluster", async () =>
 
 test("escapes what it writes into the page", async () => {
   const html = await renderHtml({
-    dataplaner: 1,
+    schemacase: 1,
     title: "</title><script>x</script>",
-    collectionsLabel: "<b>Tabellen</b>",
+    collectionsLabel: "<b>Tables</b>",
     collections: [{ name: "t", fields: [{ name: "c", type: "text" }] }],
   });
   const page = html.split("<script>")[0];
-  assert.equal(page.includes("<b>Tabellen</b>"), false);
+  assert.equal(page.includes("<b>Tables</b>"), false);
   assert.match(page, /&lt;\/title&gt;/);
-  assert.match(page, /&lt;b&gt;Tabellen&lt;\/b&gt;/);
+  assert.match(page, /&lt;b&gt;Tables&lt;\/b&gt;/);
 });
 
 test("a name that would break the diagram source is escaped, not emitted", async () => {
   const dot = toDot(
     normalizeSpec({
-      dataplaner: 1,
+      schemacase: 1,
       collections: [{ name: "t", fields: [{ name: '</TD><TD>evil', type: "text" }] }],
     })
   );

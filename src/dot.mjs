@@ -71,8 +71,9 @@ function foreignColumns(links) {
 
 /**
  * A foreign key is drawn from the column holding it to the column it references. Only the first
- * column of a composite key is anchored: every governance key starts with project_id, so
- * anchoring all of them would draw the same line 28 times into one row.
+ * column of a composite key is anchored, skipping a leading tenant column such as project_id:
+ * every composite key in a multi-tenant schema starts with it, so anchoring on it would draw the
+ * same line many times into one row.
  */
 function edgeFor(link, byName) {
   const child = byName.get(link.to);

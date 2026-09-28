@@ -1,5 +1,5 @@
 {
-  "dataplaner": 1,
+  "schemacase": 1,
   "title": "Orders",
   "collectionsLabel": "tables",
   "operationsLabel": "endpoints",

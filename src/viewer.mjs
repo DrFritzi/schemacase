@@ -16,7 +16,7 @@ const PANEL = `
   function open(title, body) {
     panel.classList.remove("wide");
     panel.innerHTML = '<header><h4>' + esc(title) + '</h4>' +
-      '<button type="button" id="detail-close" aria-label="schliessen">&times;</button></header>' + body;
+      '<button type="button" id="detail-close" aria-label="close">&times;</button></header>' + body;
     panel.hidden = false;
     document.getElementById("detail-close").addEventListener("click", () => { panel.hidden = true; });
   }
@@ -83,7 +83,7 @@ const PANEL = `
     panel.classList.add("wide");
     // The section brings its own heading; a second one in the panel header just repeats it.
     panel.innerHTML = '<header><h4></h4>' +
-      '<button type="button" id="detail-close" aria-label="schliessen">&times;</button></header>' +
+      '<button type="button" id="detail-close" aria-label="close">&times;</button></header>' +
       source.innerHTML;
     panel.hidden = false;
     document.getElementById("detail-close").addEventListener("click", () => { panel.hidden = true; });

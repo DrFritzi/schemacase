@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- *   dataplaner <spec.json> [-o page.html]
+ *   schemacase <spec.json> [-o page.html]
  *
  * Without -o the page lands beside the spec, under the same name.
  */
@@ -8,7 +8,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { renderHtml } from "./render.mjs";
 
-const USAGE = "usage: dataplaner <spec.json> [--proposal <spec.json>] [-o page.html]";
+const USAGE = "usage: schemacase <spec.json> [--proposal <spec.json>] [-o page.html]";
 
 export function parseArgs(argv) {
   const out = { spec: "", html: "", proposal: "" };

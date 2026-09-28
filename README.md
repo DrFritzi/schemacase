@@ -1,4 +1,6 @@
-# dataplaner
+# schemacase
+
+*Every column makes its case.*
 
 Turns a **data-model spec** into one self-contained HTML page: a single diagram of the whole
 model — every store with every column, the operations that reach them, the systems around them,
@@ -10,26 +12,25 @@ the same way a renderer for an OpenAPI document only ever sees the document. The
 the project it describes, the picture is made here.
 
 ```
-project (owns the data)          dataplaner (owns the picture)
+project (owns the data)          schemacase (owns the picture)
   introspect  ──►  model.json  ──►  render  ──►  model.html
 ```
 
 ## Use
 
 ```bash
-node path/to/dataplaner/src/cli.mjs docs/model.json            # writes docs/model.html
-node path/to/dataplaner/src/cli.mjs docs/model.json -o out.html
-node path/to/dataplaner/src/cli.mjs docs/model.json --proposal docs/proposed.json
+npx schemacase docs/model.json                                   # writes docs/model.html
+npx schemacase docs/model.json -o out.html
+npx schemacase docs/model.json --proposal docs/proposed.json
 ```
 
-Not published to a registry, so there is no `npx dataplaner` — point node at the checkout, or
-`npm link` it once if you use it daily.
+Or install it (`npm i -D schemacase`) and call `schemacase` from a script. Node 22 or later.
 
 Or as a library — note it is async, because Graphviz lays the diagram out while the page is
 built rather than in the reader's browser:
 
 ```js
-import { renderHtml } from "dataplaner";
+import { renderHtml } from "schemacase";
 writeFileSync("model.html", await renderHtml(JSON.parse(readFileSync("model.json", "utf8"))));
 ```
 
@@ -51,7 +52,7 @@ rather than a layout engine: a few hundred KB, and no network at any point.
 
 ## The spec
 
-One JSON object. `dataplaner: 1` is the version and is required; everything else is optional and
+One JSON object. `schemacase: 1` is the version and is required; everything else is optional and
 falls back to a neutral default, so a spec can start small and grow.
 
 | key | what it is |
@@ -97,14 +98,14 @@ the collections, fields and operations it touches:
 
 ```json
 {
-  "dataplaner": 1,
+  "schemacase": 1,
   "changes": [
     {
       "id": "P1",
-      "title": "Provenance as columns",
-      "why": "The same stamp in nine places, and the time inside it is already a column.",
-      "cost": "A migration across five tables.",
-      "affects": { "collections": ["bugs"], "fields": ["bugs.created_by", "bugs.created_by_type"] }
+      "title": "Shipping address as a column",
+      "why": "A document holding exactly one field.",
+      "cost": "A migration of every open order.",
+      "affects": { "collections": ["orders"], "fields": ["orders.shipping", "orders.ship_to"] }
     }
   ],
   "collections": [ "…the proposed model…" ]

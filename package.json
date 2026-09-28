@@ -1,11 +1,10 @@
 {
-  "name": "dataplaner",
+  "name": "schemacase",
   "version": "0.1.0",
-  "private": true,
+  "description": "Every column makes its case: render a data-model spec as one self-contained HTML page, with unexplained columns listed as schema debt.",
   "type": "module",
-  "description": "Renders a data-model spec as one self-contained HTML page.",
   "bin": {
-    "dataplaner": "src/cli.mjs"
+    "schemacase": "src/cli.mjs"
   },
   "exports": {
     ".": "./src/render.mjs",
@@ -32,7 +31,6 @@
   "packageManager": "pnpm@11.14.0",
   "dependencies": {
     "@viz-js/viz": "^3.29.0",
-    "mermaid": "^11.17.0",
     "svg-pan-zoom": "^3.6.2"
   }
 }

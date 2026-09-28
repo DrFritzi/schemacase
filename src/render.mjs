@@ -39,7 +39,7 @@ function renderMissing(spec) {
 }
 
 /**
- * @param {object} input a dataplaner spec
+ * @param {object} input a schemacase spec
  * @param {object} [proposedInput] a second spec, plus a `changes` list, to review against the first
  * @returns {string} a complete HTML document
  */
@@ -65,7 +65,7 @@ export async function renderHtml(input, proposedInput = null) {
   // The page is the diagram. Everything else is either chrome in the rail or one click away in
   // the panel — including the proposals, which stay reachable because they are what you answer.
   return `<!doctype html>
-<html lang="de"><head><meta charset="utf-8" />
+<html lang="en"><head><meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>${esc(spec.title)}</title>
 <style>${STYLE}</style></head>

@@ -1,5 +1,5 @@
 /**
- * The spec is the whole input. dataplaner never reads a database, calls a server or knows which
+ * The spec is the whole input. schemacase never reads a database, calls a server or knows which
  * project it is describing — everything it draws arrives in one file, the way a renderer for an
  * OpenAPI document only ever sees the document.
  *
@@ -124,8 +124,8 @@ function normalizeGroup(group) {
  */
 export function normalizeSpec(spec) {
   if (!spec || typeof spec !== "object") fail("expected an object");
-  if (spec.dataplaner !== SPEC_VERSION) {
-    fail(`unsupported version ${JSON.stringify(spec.dataplaner)}, expected ${SPEC_VERSION}`);
+  if (spec.schemacase !== SPEC_VERSION) {
+    fail(`unsupported version ${JSON.stringify(spec.schemacase)}, expected ${SPEC_VERSION}`);
   }
 
   const collections = requireArray(spec, "collections").map(normalizeCollection);
