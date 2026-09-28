@@ -2,6 +2,10 @@
 
 *Every column makes its case.*
 
+**[Live demo](https://drfritzi.github.io/schemacase/)**, rendered from [`example/shop.json`](example/shop.json).
+
+[![The example shop: tables, operations and systems on one canvas; the orders panel is open and its shipping column is flagged as unjustified](docs/screenshot.png)](https://drfritzi.github.io/schemacase/)
+
 Turns a **data-model spec** into one self-contained HTML page: a single diagram of the whole
 model — every store with every column, the operations that reach them, the systems around them,
 and the data crossing between — that you can pan, zoom and click through.
