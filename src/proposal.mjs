@@ -14,7 +14,7 @@ const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ESCAPES[c]);
 const MARK = { added: "+", removed: "−", changed: "~" };
 const WORD = { added: "added", removed: "removed", changed: "changed" };
 
-function fieldShape(field) {
+export function fieldShape(field) {
   if (!field) return "";
   const marks = [
     field.key ? "key" : "",

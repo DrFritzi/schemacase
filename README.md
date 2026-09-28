@@ -167,6 +167,58 @@ proposal cannot carry along what nobody agreed to. A change that lists fields mu
 it *adds* as well as the ones it removes — otherwise its card shows deletions only and reads as
 data loss.
 
+### In a pull request
+
+The same review works outside the page. `schemacase diff` prints it as Markdown:
+
+```bash
+npx schemacase diff docs/model.json docs/proposed.json                         # to stdout
+npx schemacase diff docs/model.json docs/proposed.json --fail-on-unaccounted   # exit 1 on smuggled changes
+```
+
+And the GitHub Action posts it on every pull request that changes the model, as one comment it
+keeps up to date across pushes:
+
+```yaml
+# .github/workflows/model-review.yml
+on:
+  pull_request:
+    paths: ["docs/model.json"]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DrFritzi/schemacase@v0
+        with:
+          spec: docs/model.json
+          fail-on-unaccounted: true
+```
+
+The spec on the pull request's base commit is compared with the spec in the pull request. Put the
+`changes` list in the spec itself (entries already on the base commit count as settled and are
+not shown again), or point `proposal:` at a separate proposal file. Any change to
+the model that no entry accounts for is listed under **Unaccounted for**, and with
+`fail-on-unaccounted` the check fails. A spec the pull request creates is compared against an
+empty one.
+
+| input | default | |
+|---|---|---|
+| `spec` | — | path to the spec in the repository |
+| `proposal` | the spec | a separate proposal file to compare against the base spec |
+| `base` | the pull request's base commit | any commit to compare against |
+| `comment` | `true` | post or update the pull-request comment |
+| `fail-on-unaccounted` | `false` | fail the step on unaccounted changes |
+| `token` | `github.token` | needs `pull-requests: write` |
+
+Outputs: `changed`, `unaccounted` (a count), `review-file` (the Markdown). The review also goes to
+the job summary. The action runs on the runner's own Node and installs nothing.
+
 ## Develop
 
 ```bash

@@ -1,0 +1,21 @@
+# Dogfood: the action reviews changes to the example spec in this repository's own pull requests.
+name: model review
+
+on:
+  pull_request:
+    paths: ["example/shop.json", "action/**", "action.yml", "src/markdown.mjs", "src/diff.mjs"]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./
+        with:
+          spec: example/shop.json
+          # A fork's token cannot comment; the review still lands in the job summary.
+          comment: ${{ github.event.pull_request.head.repo.full_name == github.repository }}

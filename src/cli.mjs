@@ -3,9 +3,10 @@
  *   schemacase <spec.json> [--proposal <spec.json>] [-o page.html]
  *   schemacase import prisma <schema.prisma> [-o spec.json]
  *   schemacase import postgres <connection-url> [--schema public] [-o spec.json]
+ *   schemacase diff <current.json> <proposed.json> [-o review.md] [--fail-on-unaccounted]
  *
  * Rendering without -o puts the page beside the spec, under the same name. Importing without -o
- * prints the spec, so it can be piped or redirected.
+ * prints the spec, so it can be piped or redirected; so does diff, with its Markdown review.
  *
  * Each command loads only what it needs: an import never pulls in the layout engine, and a render
  * never needs a database driver.
@@ -18,16 +19,21 @@ const USAGE = [
   "usage: schemacase <spec.json> [--proposal <spec.json>] [-o page.html]",
   "       schemacase import prisma <schema.prisma> [-o spec.json]",
   "       schemacase import postgres <connection-url> [--schema public] [-o spec.json]",
+  "       schemacase diff <current.json> <proposed.json> [-o review.md] [--fail-on-unaccounted]",
 ].join("\n");
 
 /** Flags that take a value, and the key each one fills. */
 const FLAGS = { "-o": "out", "--out": "out", "--proposal": "proposal", "--schema": "schema" };
+/** Flags that stand alone. */
+const SWITCHES = { "--fail-on-unaccounted": "failOnUnaccounted" };
 
 function scan(argv) {
   const flags = {};
   const positional = [];
   for (let i = 0; i < argv.length; i += 1) {
-    if (FLAGS[argv[i]]) {
+    if (SWITCHES[argv[i]]) {
+      flags[SWITCHES[argv[i]]] = true;
+    } else if (FLAGS[argv[i]]) {
       flags[FLAGS[argv[i]]] = argv[i + 1] ?? "";
       i += 1;
     } else {
@@ -55,6 +61,14 @@ export function parseImportArgs(argv) {
   const [source, input] = positional;
   if (!["prisma", "postgres"].includes(source) || !input) throw new Error(USAGE);
   return { source, input, out: flags.out ?? "", schema: flags.schema || "public" };
+}
+
+/** The diff command's arguments. */
+export function parseDiffArgs(argv) {
+  const { flags, positional } = scan(argv);
+  const [current, proposed] = positional;
+  if (!current || !proposed) throw new Error(USAGE);
+  return { current, proposed, out: flags.out ?? "", failOnUnaccounted: flags.failOnUnaccounted === true };
 }
 
 const here = (p) => resolve(process.cwd(), p);
@@ -87,12 +101,25 @@ async function importSpec(argv) {
   console.error(`wrote ${here(out)}: ${spec.collections.length} collections, ${columns} columns to justify`);
 }
 
+async function diff(argv) {
+  const { current, proposed, out, failOnUnaccounted } = parseDiffArgs(argv);
+  const { diffMarkdown } = await import("./markdown.mjs");
+  const read = (p) => JSON.parse(readFileSync(here(p), "utf8"));
+  const review = diffMarkdown(read(current), read(proposed));
+  if (out) writeFileSync(here(out), review.markdown, "utf8");
+  else process.stdout.write(review.markdown);
+  if (failOnUnaccounted && review.unaccounted.length) {
+    throw new Error(`${review.unaccounted.length} change(s) unaccounted for`);
+  }
+}
+
 export async function main(argv) {
   if (argv[0] === "-h" || argv[0] === "--help") {
     console.log(USAGE);
     return;
   }
   if (argv[0] === "import") return importSpec(argv.slice(1));
+  if (argv[0] === "diff") return diff(argv.slice(1));
   return render(argv);
 }
 

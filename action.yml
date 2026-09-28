@@ -1,0 +1,56 @@
+name: schemacase review
+description: Comment a pull request's data-model change as a reviewable diff, with anything no change accounts for called out.
+author: DrFritzi
+branding:
+  icon: columns
+  color: blue
+
+inputs:
+  spec:
+    description: Path to the spec in the repository, e.g. docs/model.json. Compared between the base commit and the pull request.
+    required: true
+  proposal:
+    description: Path to a separate proposal spec (with a `changes` list) to compare against the base spec instead of the spec itself.
+    required: false
+    default: ""
+  base:
+    description: Commit to compare against. Defaults to the pull request's base commit.
+    required: false
+    default: ""
+  comment:
+    description: Post the review as a pull-request comment, kept up to date across pushes.
+    required: false
+    default: "true"
+  fail-on-unaccounted:
+    description: Fail the step when the diff holds changes no entry in `changes` accounts for.
+    required: false
+    default: "false"
+  token:
+    description: "Token used to post the comment. Needs `pull-requests: write`."
+    required: false
+    default: ${{ github.token }}
+
+outputs:
+  changed:
+    description: '"true" when the model differs from the base.'
+    value: ${{ steps.review.outputs.changed }}
+  unaccounted:
+    description: Number of changes no entry in `changes` accounts for.
+    value: ${{ steps.review.outputs.unaccounted }}
+  review-file:
+    description: Path to the Markdown review.
+    value: ${{ steps.review.outputs.review-file }}
+
+runs:
+  using: composite
+  steps:
+    - id: review
+      shell: bash
+      run: node "$GITHUB_ACTION_PATH/action/run.mjs"
+      env:
+        INPUT_SPEC: ${{ inputs.spec }}
+        INPUT_PROPOSAL: ${{ inputs.proposal }}
+        INPUT_BASE: ${{ inputs.base }}
+        INPUT_COMMENT: ${{ inputs.comment }}
+        INPUT_FAIL_ON_UNACCOUNTED: ${{ inputs.fail-on-unaccounted }}
+        INPUT_TOKEN: ${{ inputs.token }}
