@@ -4,9 +4,9 @@
 
 *Every column makes its case.*
 
-**[Live demo](https://drfritzi.github.io/schemacase/)**, rendered from [`example/shop.json`](example/shop.json).
+**[Live demo](https://drfritzi.github.io/schemacase/)**, rendered from [`example/shop.json`](example/shop.json) and a proposed change to it, [`example/proposed.json`](example/proposed.json). Click a table, use the rail on the left, and open **Proposals**.
 
-[![The example shop: tables, operations and systems on one canvas; the orders panel is open and its shipping column is flagged as unjustified](docs/screenshot.png)](https://drfritzi.github.io/schemacase/)
+[![A webshop's tables, endpoints and systems on one canvas. The orders table is open in the panel: each column shows why it exists and which requirement needs it, and the columns nobody has explained, total_cents, coupon_code and legacy_ref, are marked with a ?](docs/screenshot.png)](https://drfritzi.github.io/schemacase/)
 
 Turns a **data-model spec** into one self-contained HTML page: a single diagram of the whole
 model — every store with every column, the operations that reach them, the systems around them,
@@ -41,7 +41,7 @@ import { renderHtml } from "schemacase";
 writeFileSync("model.html", await renderHtml(JSON.parse(readFileSync("model.json", "utf8"))));
 ```
 
-See [`example/shop.json`](example/shop.json) for a complete spec, and `pnpm example` to render it.
+See [`example/shop.json`](example/shop.json) for a complete spec: nine tables in four areas, five systems around them, and nine columns left unexplained on purpose. `pnpm example` renders it, with its proposal.
 
 ## The page
 
@@ -167,6 +167,8 @@ the collections, fields and operations it touches:
 }
 ```
 
+[![The proposals panel: three decisions, each showing exactly which columns it removes or adds, and a warning that one added column, products.weight_grams, belongs to no decision](docs/proposals.png)](https://drfritzi.github.io/schemacase/)
+
 The change list is authored; the before-and-after under each card is computed by diffing the two
 specs. Anything in that diff no card accounts for is printed as **Unaccounted for**, so a
 proposal cannot carry along what nobody agreed to. A change that lists fields must list the ones
@@ -241,7 +243,7 @@ or, without installing, `https://unpkg.com/schemacase/schema/schemacase.schema.j
 ```bash
 pnpm install
 pnpm quicktest     # lint + tests, a few seconds
-pnpm example       # render example/shop.json
+pnpm example       # render example/shop.json with its proposal
 ```
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for how the code is written and how releases work.
