@@ -1,42 +1,114 @@
 #!/usr/bin/env node
 /**
- *   schemacase <spec.json> [-o page.html]
+ *   schemacase <spec.json> [--proposal <spec.json>] [-o page.html]
+ *   schemacase import prisma <schema.prisma> [-o spec.json]
+ *   schemacase import postgres <connection-url> [--schema public] [-o spec.json]
  *
- * Without -o the page lands beside the spec, under the same name.
+ * Rendering without -o puts the page beside the spec, under the same name. Importing without -o
+ * prints the spec, so it can be piped or redirected.
+ *
+ * Each command loads only what it needs: an import never pulls in the layout engine, and a render
+ * never needs a database driver.
  */
-import { readFileSync, writeFileSync } from "node:fs";
+import { readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { renderHtml } from "./render.mjs";
+import { pathToFileURL } from "node:url";
 
-const USAGE = "usage: schemacase <spec.json> [--proposal <spec.json>] [-o page.html]";
+const USAGE = [
+  "usage: schemacase <spec.json> [--proposal <spec.json>] [-o page.html]",
+  "       schemacase import prisma <schema.prisma> [-o spec.json]",
+  "       schemacase import postgres <connection-url> [--schema public] [-o spec.json]",
+].join("\n");
 
-export function parseArgs(argv) {
-  const out = { spec: "", html: "", proposal: "" };
+/** Flags that take a value, and the key each one fills. */
+const FLAGS = { "-o": "out", "--out": "out", "--proposal": "proposal", "--schema": "schema" };
+
+function scan(argv) {
+  const flags = {};
+  const positional = [];
   for (let i = 0; i < argv.length; i += 1) {
-    if (argv[i] === "-o" || argv[i] === "--out") {
-      out.html = argv[i + 1] ?? "";
+    if (FLAGS[argv[i]]) {
+      flags[FLAGS[argv[i]]] = argv[i + 1] ?? "";
       i += 1;
-    } else if (argv[i] === "--proposal") {
-      out.proposal = argv[i + 1] ?? "";
-      i += 1;
-    } else if (!out.spec) {
-      out.spec = argv[i];
+    } else {
+      positional.push(argv[i]);
     }
   }
-  if (!out.spec) throw new Error(USAGE);
-  if (!out.html) out.html = out.spec.replace(/\.json$/i, "") + ".html";
-  return out;
+  return { flags, positional };
 }
 
-async function main(argv) {
+/** The render command's arguments. */
+export function parseArgs(argv) {
+  const { flags, positional } = scan(argv);
+  const spec = positional[0] ?? "";
+  if (!spec) throw new Error(USAGE);
+  return {
+    spec,
+    html: flags.out || spec.replace(/\.json$/i, "") + ".html",
+    proposal: flags.proposal ?? "",
+  };
+}
+
+/** The import command's arguments: `import <source> <input>`. */
+export function parseImportArgs(argv) {
+  const { flags, positional } = scan(argv);
+  const [source, input] = positional;
+  if (!["prisma", "postgres"].includes(source) || !input) throw new Error(USAGE);
+  return { source, input, out: flags.out ?? "", schema: flags.schema || "public" };
+}
+
+const here = (p) => resolve(process.cwd(), p);
+
+async function render(argv) {
   const { spec, html, proposal } = parseArgs(argv);
-  const read = (p) => JSON.parse(readFileSync(resolve(process.cwd(), p), "utf8"));
-  const target = resolve(process.cwd(), html);
-  writeFileSync(target, await renderHtml(read(spec), proposal ? read(proposal) : null), "utf8");
-  console.log(`wrote ${target}`);
+  const { renderHtml } = await import("./render.mjs");
+  const read = (p) => JSON.parse(readFileSync(here(p), "utf8"));
+  writeFileSync(here(html), await renderHtml(read(spec), proposal ? read(proposal) : null), "utf8");
+  console.log(`wrote ${here(html)}`);
 }
 
-if (import.meta.url === (await import("node:url")).pathToFileURL(process.argv[1] ?? "").href) {
+async function importSpec(argv) {
+  const { source, input, out, schema } = parseImportArgs(argv);
+  let spec;
+  if (source === "prisma") {
+    const { importPrisma } = await import("./import/prisma.mjs");
+    spec = importPrisma(readFileSync(here(input), "utf8"));
+  } else {
+    const { importPostgres } = await import("./import/postgres.mjs");
+    spec = await importPostgres({ connectionString: input, schema });
+  }
+  const json = JSON.stringify(spec, null, 2) + "\n";
+  if (!out) {
+    process.stdout.write(json);
+    return;
+  }
+  writeFileSync(here(out), json, "utf8");
+  const columns = spec.collections.reduce((n, c) => n + c.fields.length, 0);
+  console.error(`wrote ${here(out)}: ${spec.collections.length} collections, ${columns} columns to justify`);
+}
+
+export async function main(argv) {
+  if (argv[0] === "-h" || argv[0] === "--help") {
+    console.log(USAGE);
+    return;
+  }
+  if (argv[0] === "import") return importSpec(argv.slice(1));
+  return render(argv);
+}
+
+/**
+ * Run only when started as a program, not when imported by the tests. Installed, the program is
+ * reached through a symlink in node_modules/.bin, so compare the resolved path.
+ */
+function isEntryPoint() {
+  try {
+    return import.meta.url === pathToFileURL(realpathSync(process.argv[1] ?? "")).href;
+  } catch {
+    return false;
+  }
+}
+
+if (isEntryPoint()) {
   try {
     await main(process.argv.slice(2));
   } catch (error) {

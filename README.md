@@ -6,14 +6,15 @@ Turns a **data-model spec** into one self-contained HTML page: a single diagram 
 model — every store with every column, the operations that reach them, the systems around them,
 and the data crossing between — that you can pan, zoom and click through.
 
-This repository holds the renderer and nothing else. It has no database driver, no server client
-and no knowledge of any particular project; everything it draws arrives in a single JSON file,
-the same way a renderer for an OpenAPI document only ever sees the document. The spec lives in
-the project it describes, the picture is made here.
+The renderer has no database driver, no server client and no knowledge of any particular
+project; everything it draws arrives in a single JSON file, the same way a renderer for an
+OpenAPI document only ever sees the document. The spec lives in the project it describes, the
+picture is made here. To start a spec from what already exists, the [importers](#start-from-an-existing-schema)
+read a Postgres database or a Prisma schema.
 
 ```
-project (owns the data)          schemacase (owns the picture)
-  introspect  ──►  model.json  ──►  render  ──►  model.html
+project (owns the data)                   schemacase (owns the picture)
+  import / write by hand  ──►  model.json  ──►  render  ──►  model.html
 ```
 
 ## Use
@@ -113,6 +114,30 @@ A spec that cannot be drawn is rejected with the reason (`unknown collection "x"
 A collection is often a database table and an operation often an API endpoint, but nothing here
 assumes it, which is what lets one renderer serve several projects. Use `collectionsLabel` /
 `operationsLabel` to put your own words on the page.
+
+## Start from an existing schema
+
+```bash
+npx schemacase import prisma prisma/schema.prisma -o docs/model.json
+npx schemacase import postgres "$DATABASE_URL" --schema public -o docs/model.json
+```
+
+Without `-o` the spec is printed. The Postgres importer reads tables, columns, primary keys and
+foreign keys from the catalogue and needs the [`pg`](https://www.npmjs.com/package/pg) package
+next to schemacase (`npm i -D pg`); it is an optional peer dependency, so rendering never
+installs a driver. The Prisma importer reads models, scalar fields, `@id` / `@@id` and
+`@relation(fields: …)`; relation fields without `fields` are the other side of a link, not a
+column.
+
+Every imported column arrives with an empty `why` and `usedBy`. That is the point: a database can
+say what is stored, never why, so the first page you render is the complete work list. Keep the
+authored half in [`fieldNotes`](#stating-a-reason-once-fieldnotes) and it survives the next import.
+
+Nullable foreign keys become `optional` links, `ON DELETE CASCADE` (`onDelete: Cascade`) becomes
+`strong`, and `json`/`jsonb` columns (Prisma: `Json` and composite types) are marked `document`.
+
+As a library: `importPostgres({ connectionString, schema })` from `schemacase/import/postgres`
+(async) and `importPrisma(source)` from `schemacase/import/prisma`.
 
 ## Reviewing a proposed change
 

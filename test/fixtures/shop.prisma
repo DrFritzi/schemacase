@@ -1,0 +1,56 @@
+// A small shop, written the way Prisma schemas usually are.
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum OrderState {
+  OPEN
+  PAID
+  SHIPPED
+}
+
+/// A person who can place orders.
+model Customer {
+  id     String  @id @default(uuid()) @db.Uuid
+  email  String  @unique
+  name   String
+  prefs  Json?
+  orders Order[]
+}
+
+model Product {
+  sku   String      @id
+  title String
+  cents Int
+  tags  String[]
+  items OrderItem[]
+  geo   Unsupported("point")?
+}
+
+model Order {
+  id         String      @id @default(uuid())
+  customer   Customer    @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  customerId String
+  state      OrderState  @default(OPEN)
+  shipping   Address?
+  items      OrderItem[]
+  placedAt   DateTime    @default(now()) @map("placed_at")
+
+  @@map("orders")
+}
+
+model OrderItem {
+  order   Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderId String
+  product Product? @relation(fields: [sku], references: [sku])
+  sku     String?
+  qty     Int
+
+  @@id([orderId, sku])
+}
+
+type Address {
+  street String
+  city   String
+}

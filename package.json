@@ -8,7 +8,9 @@
   },
   "exports": {
     ".": "./src/render.mjs",
-    "./spec": "./src/spec.mjs"
+    "./spec": "./src/spec.mjs",
+    "./import/postgres": "./src/import/postgres.mjs",
+    "./import/prisma": "./src/import/prisma.mjs"
   },
   "files": [
     "src"
@@ -22,7 +24,8 @@
   "devDependencies": {
     "@eslint/js": "^9.39.5",
     "eslint": "^9.39.5",
-    "globals": "^17.11.0"
+    "globals": "^17.11.0",
+    "pg": "^8.23.0"
   },
   "engines": {
     "node": ">=22",
@@ -32,5 +35,13 @@
   "dependencies": {
     "@viz-js/viz": "^3.29.0",
     "svg-pan-zoom": "^3.6.2"
+  },
+  "peerDependencies": {
+    "pg": ">=8"
+  },
+  "peerDependenciesMeta": {
+    "pg": {
+      "optional": true
+    }
   }
 }
