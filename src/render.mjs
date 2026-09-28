@@ -2,16 +2,14 @@
  * A spec in, one self-contained HTML page out. No dependency, no network, nothing to serve:
  * the result is a file you open.
  */
+import { esc } from "./esc.mjs";
 import { normalizeSpec } from "./spec.mjs";
 import { toDot, areaId, sysId } from "./dot.mjs";
 import { renderDot } from "./graphviz.mjs";
 import { viewerScript } from "./viewer.mjs";
-import { panZoomSource } from "./bundles.mjs";
 import { STYLE } from "./style.mjs";
 import { renderProposals } from "./proposal.mjs";
 
-const ESCAPES = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" };
-const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ESCAPES[c]);
 
 /**
  * A group is authored, so it can name a table or an operation that is not there. The canvas draws
@@ -92,7 +90,6 @@ export async function renderHtml(input, proposedInput = null) {
   </div>
   ${renderMissing(spec)}
   ${proposals ? `<template id="proposals-source">${proposals}</template>` : ""}
-<script>${panZoomSource()}</script>
 <script>${viewerScript(spec)}</script>
 </body></html>`;
 }

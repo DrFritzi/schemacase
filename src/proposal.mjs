@@ -6,10 +6,9 @@
  * stable id. Reviewing is then a sentence: "P1 yes, P3 no". That is deliberately lower-tech than
  * a form, and it works in a file you can mail to someone.
  */
+import { esc } from "./esc.mjs";
 import { diffSpecs, slice, unaccounted } from "./diff.mjs";
 
-const ESCAPES = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" };
-const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ESCAPES[c]);
 
 const MARK = { added: "+", removed: "−", changed: "~" };
 const WORD = { added: "added", removed: "removed", changed: "changed" };

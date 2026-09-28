@@ -10,9 +10,7 @@
  * Rendered to SVG when the page is built, not in the browser: the reader gets a picture, not a
  * megabyte of layout engine.
  */
-
-const ESC = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" };
-const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ESC[c]);
+import { esc } from "./esc.mjs";
 
 /** DOT ids must be plain, and must survive round-tripping back to a name on click. */
 export const tableId = (name) => `t_${String(name).replace(/[^A-Za-z0-9_]/g, "_")}`;
@@ -20,7 +18,6 @@ export const portId = (name) => `p_${String(name).replace(/[^A-Za-z0-9_]/g, "_")
 export const opId = (name) => `o_${String(name).replace(/[^A-Za-z0-9_]/g, "_")}`;
 export const areaId = (i) => `g${i}`;
 export const sysId = (i) => `s${i}`;
-
 const COLORS = {
   line: "#c9d2dc",
   ink: "#16202c",

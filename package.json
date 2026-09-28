@@ -47,8 +47,7 @@
     "example": "node src/cli.mjs example/shop.json -o example/shop.html"
   },
   "dependencies": {
-    "@viz-js/viz": "^3.29.0",
-    "svg-pan-zoom": "^3.6.2"
+    "@viz-js/viz": "^3.29.0"
   },
   "peerDependencies": {
     "pg": ">=8"

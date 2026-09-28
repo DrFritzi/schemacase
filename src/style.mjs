@@ -51,7 +51,8 @@ export const STYLE = `
   .rail .external{border-left:3px solid var(--warn)}
   .rail .store{border-left:3px solid var(--accent)}
   .rail .internal{border-left:3px solid var(--muted)}
-  .canvas{grid-area:canvas;overflow:hidden;position:relative;min-height:0;cursor:grab}
+  .canvas{grid-area:canvas;overflow:hidden;position:relative;min-height:0;cursor:grab;
+    touch-action:none;user-select:none}
   .canvas:active{cursor:grabbing}
   .canvas svg{display:block;width:100%;height:100%}
   .detail{grid-area:detail;border-top:1px solid var(--line);padding:14px 16px;overflow:auto;

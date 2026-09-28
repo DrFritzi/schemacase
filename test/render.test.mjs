@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import { Script } from "node:vm";
 import { renderHtml } from "../src/render.mjs";
 import { toDot } from "../src/dot.mjs";
 import { normalizeSpec } from "../src/spec.mjs";
@@ -145,4 +146,12 @@ test("spec text cannot end the page script and run as markup", async () => {
   const opened = html.split("<script>").length - 1;
   const closed = html.split("</script>").length - 1;
   assert.equal(closed, opened, "no script element may be closed early");
+});
+
+test("every script in the page is valid JavaScript", async () => {
+  // Nothing else here runs the page's own code, so a stray quote in a template would go unseen.
+  const html = await renderHtml(shop(), shop());
+  const scripts = html.split("<script>").slice(1).map((part) => part.split("</script>")[0]);
+  assert.ok(scripts.length > 0);
+  for (const code of scripts) assert.doesNotThrow(() => new Script(code));
 });

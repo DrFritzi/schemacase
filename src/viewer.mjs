@@ -7,14 +7,15 @@
  * nothing here fetches anything. Split in two only so neither half grows past reading size.
  */
 
-/** Turning a thing in the spec into the panel beside the canvas. */
+import { esc } from "./esc.mjs";
+
+/** Turning a thing in the spec into the panel beside the canvas. The page gets the same `esc`. */
 const PANEL = `
-  const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) =>
-    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const esc = ${esc};
   const tag = (kind, text) => '<span class="tag ' + kind + '">' + esc(text) + '</span>';
 
-  function open(title, body) {
-    panel.classList.remove("wide");
+  function open(title, body, wide) {
+    panel.classList.toggle("wide", Boolean(wide));
     panel.innerHTML = '<header><h4>' + esc(title) + '</h4>' +
       '<button type="button" id="detail-close" aria-label="close">&times;</button></header>' + body;
     panel.hidden = false;
@@ -79,14 +80,8 @@ const PANEL = `
 
   function showProposals() {
     const source = document.getElementById("proposals-source");
-    if (!source) return;
-    panel.classList.add("wide");
     // The section brings its own heading; a second one in the panel header just repeats it.
-    panel.innerHTML = '<header><h4></h4>' +
-      '<button type="button" id="detail-close" aria-label="close">&times;</button></header>' +
-      source.innerHTML;
-    panel.hidden = false;
-    document.getElementById("detail-close").addEventListener("click", () => { panel.hidden = true; });
+    if (source) open("", source.innerHTML, true);
   }
 
   function showSystem(index) {
@@ -97,37 +92,102 @@ const PANEL = `
 `;
 
 /**
- * Pan, zoom and the rail. The one subtlety is `boxInRoot`: getBBox() answers in the element's own
- * coordinates and every Graphviz node sits under a transform, so the box has to be carried into
- * the space pan and zoom work in. Skipping that is why the rail used to fly to the wrong place.
+ * Pan, zoom and the rail, on the SVG's own viewBox. The viewBox is kept at the canvas's aspect
+ * ratio so it is exactly the visible region: the view is a centre and a zoom, and zooming keeps
+ * the point under the cursor where it is. `boxInRoot` carries an element's box into that space,
+ * because getBBox() answers in the element's own coordinates and every Graphviz node sits under
+ * a transform.
  */
 const NAVIGATION = `
   const byId = (id) => svg.querySelector('[id="' + id + '"]');
+  const clamp = (v, lo, hi) => Math.min(Math.max(v, lo), hi);
+  const vb = svg.viewBox.baseVal;
+  const home = { cx: vb.x + vb.width / 2, cy: vb.y + vb.height / 2, w: vb.width, h: vb.height };
+  let cx = home.cx, cy = home.cy, zoom = 1;
+
+  const size = () => svg.getBoundingClientRect();
+  const fitWidth = (r) => Math.max(home.w, home.h * r.width / r.height);
+
+  function draw() {
+    const r = size();
+    if (!r.width || !r.height) return;
+    const w = fitWidth(r) / zoom, h = w * r.height / r.width;
+    svg.setAttribute("viewBox", [cx - w / 2, cy - h / 2, w, h].join(" "));
+  }
+
+  function toUser(x, y) {
+    const p = svg.createSVGPoint();
+    p.x = x; p.y = y;
+    return p.matrixTransform(svg.getScreenCTM().inverse());
+  }
+
+  function zoomBy(factor, x, y) {
+    const r = size();
+    const px = x ?? r.left + r.width / 2, py = y ?? r.top + r.height / 2;
+    const under = toUser(px, py);
+    zoom = clamp(zoom * factor, 0.1, 14);
+    draw();
+    const now = toUser(px, py);
+    cx += under.x - now.x; cy += under.y - now.y;
+    draw();
+  }
+
+  function fit() { cx = home.cx; cy = home.cy; zoom = 1; draw(); }
 
   function boxInRoot(el) {
-    const root = svg.querySelector(".svg-pan-zoom_viewport") || svg;
     const b = el.getBBox();
-    const m = root.getScreenCTM().inverse().multiply(el.getScreenCTM());
-    const corners = [[b.x, b.y], [b.x + b.width, b.y], [b.x, b.y + b.height], [b.x + b.width, b.y + b.height]]
-      .map(([x, y]) => { const p = svg.createSVGPoint(); p.x = x; p.y = y; return p.matrixTransform(m); });
-    const xs = corners.map((p) => p.x), ys = corners.map((p) => p.y);
-    const x = Math.min.apply(null, xs), y = Math.min.apply(null, ys);
-    return { x, y, width: Math.max.apply(null, xs) - x, height: Math.max.apply(null, ys) - y };
+    const m = svg.getScreenCTM().inverse().multiply(el.getScreenCTM());
+    const at = (x, y) => { const p = svg.createSVGPoint(); p.x = x; p.y = y; return p.matrixTransform(m); };
+    const a = at(b.x, b.y), c = at(b.x + b.width, b.y + b.height);
+    return { x: Math.min(a.x, c.x), y: Math.min(a.y, c.y), width: Math.abs(c.x - a.x), height: Math.abs(c.y - a.y) };
   }
 
   function focus(el) {
-    if (!pz || !el) return;
+    if (!el) return;
     const box = boxInRoot(el);
     if (!box.width || !box.height) return;
-    const sizes = pz.getSizes();
-    const unit = sizes.realZoom / pz.getZoom();
-    const fit = Math.min(sizes.width / box.width, sizes.height / box.height) / unit;
-    pz.zoom(Math.max(0.15, Math.min(fit * 0.85, 6)));
-    const after = pz.getSizes();
-    pz.pan({
-      x: sizes.width / 2 - (box.x + box.width / 2) * after.realZoom,
-      y: sizes.height / 2 - (box.y + box.height / 2) * after.realZoom,
+    const w = fitWidth(size()), h = w * size().height / size().width;
+    zoom = clamp(Math.min(w / box.width, h / box.height) * 0.85, 0.15, 6);
+    cx = box.x + box.width / 2; cy = box.y + box.height / 2;
+    draw();
+  }
+
+  // One finger or the mouse pans, two fingers pinch, the wheel zooms. A drag that ends on a node
+  // is not a click on it.
+  function wireCanvas() {
+    const canvas = svg.parentElement;
+    const touches = new Map();
+    let travelled = 0;
+    canvas.addEventListener("pointerdown", (e) => {
+      touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      travelled = 0;
     });
+    window.addEventListener("pointermove", (e) => {
+      const from = touches.get(e.pointerId);
+      if (!from) return;
+      const to = { x: e.clientX, y: e.clientY };
+      travelled += Math.abs(to.x - from.x) + Math.abs(to.y - from.y);
+      const other = touches.size === 2 ? [...touches].find(([id]) => id !== e.pointerId)[1] : null;
+      if (other) {
+        const before = Math.hypot(from.x - other.x, from.y - other.y);
+        const after = Math.hypot(to.x - other.x, to.y - other.y);
+        if (before && after) zoomBy(after / before, (to.x + other.x) / 2, (to.y + other.y) / 2);
+      } else {
+        const unit = vb.width / size().width;
+        cx -= (to.x - from.x) * unit; cy -= (to.y - from.y) * unit;
+        draw();
+      }
+      touches.set(e.pointerId, to);
+    });
+    const release = (e) => touches.delete(e.pointerId);
+    window.addEventListener("pointerup", release);
+    window.addEventListener("pointercancel", release);
+    canvas.addEventListener("click", (e) => { if (travelled > 5) e.stopPropagation(); }, true);
+    canvas.addEventListener("wheel", (e) => {
+      e.preventDefault();
+      zoomBy(Math.exp(-e.deltaY * (e.ctrlKey ? 0.01 : 0.002)), e.clientX, e.clientY);
+    }, { passive: false });
+    canvas.addEventListener("dblclick", (e) => zoomBy(1.5, e.clientX, e.clientY));
   }
 
   function wire() {
@@ -140,17 +200,17 @@ const NAVIGATION = `
         else showSystem(Number(node.id.slice(1)));
       });
     }
-    document.getElementById("zoom-in").addEventListener("click", () => pz.zoomIn());
-    document.getElementById("zoom-out").addEventListener("click", () => pz.zoomOut());
-    document.getElementById("zoom-fit").addEventListener("click", () => {
-      pz.reset(); pz.fit(); pz.center(); panel.hidden = true;
-    });
+    wireCanvas();
+    document.getElementById("zoom-in").addEventListener("click", () => zoomBy(1.3));
+    document.getElementById("zoom-out").addEventListener("click", () => zoomBy(1 / 1.3));
+    document.getElementById("zoom-fit").addEventListener("click", () => { fit(); panel.hidden = true; });
     for (const button of document.querySelectorAll("[data-jump]")) {
       button.addEventListener("click", () => focus(byId(button.dataset.jump)));
     }
     const proposals = document.getElementById("show-proposals");
     if (proposals) proposals.addEventListener("click", showProposals);
-    window.addEventListener("resize", () => { pz.resize(); pz.fit(); pz.center(); });
+    // The canvas also changes size when the panel opens or closes, not only with the window.
+    new ResizeObserver(draw).observe(svg.parentElement);
   }
 `;
 
@@ -181,15 +241,9 @@ export const viewerScript = (spec) => `
   const panel = document.getElementById("detail");
   const svg = document.getElementById("graph");
   if (!svg) return;
-  let pz = null;
 ${PANEL}
 ${NAVIGATION}
-  svg.removeAttribute("width");
-  svg.removeAttribute("height");
-  pz = svgPanZoom(svg, {
-    zoomScaleSensitivity: 0.3, minZoom: 0.1, maxZoom: 14,
-    controlIconsEnabled: false, fit: true, center: true,
-  });
+  fit();
   wire();
 })();
 `;

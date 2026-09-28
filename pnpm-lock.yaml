@@ -11,9 +11,6 @@ importers:
       '@viz-js/viz':
         specifier: ^3.29.0
         version: 3.29.0
-      svg-pan-zoom:
-        specifier: ^3.6.2
-        version: 3.6.2
     devDependencies:
       '@eslint/js':
         specifier: ^9.39.5
@@ -425,9 +422,6 @@ packages:
     resolution: {integrity: sha512-qpCAvRl9stuOHveKsn7HncJRvv501qIacKzQlO/+Lwxc9+0q2wLyv4Dfvt80/DPn2pqOBsJdDiogXGR9+OvwRw==}
     engines: {node: '>=8'}
 
-  svg-pan-zoom@3.6.2:
-    resolution: {integrity: sha512-JwnvRWfVKw/Xzfe6jriFyfey/lWJLq4bUh2jwoR5ChWQuQoOH8FEh1l/bEp46iHHKHEJWIyFJETbazraxNWECg==}
-
   type-check@0.4.0:
     resolution: {integrity: sha512-XleUoc9uwGXqjWwXaUTZAmzMcFZ5858QA2vvx1Ur5xIcixXIP+8LnFDgRplU30us6teqdlskFfu+ae4K79Ooew==}
     engines: {node: '>= 0.8.0'}
@@ -827,8 +821,6 @@ snapshots:
   supports-color@7.2.0:
     dependencies:
       has-flag: 4.0.0
-
-  svg-pan-zoom@3.6.2: {}
 
   type-check@0.4.0:
     dependencies:
