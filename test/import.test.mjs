@@ -1,13 +1,13 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { importPrisma } from "../src/import/prisma.mjs";
 import { importPostgres, rowsToSpec } from "../src/import/postgres.mjs";
 import { normalizeSpec } from "../src/spec.mjs";
 import { parseImportArgs } from "../src/cli.mjs";
+import { read } from "./helpers.mjs";
 
 const prisma = () =>
-  importPrisma(readFileSync(new URL("./fixtures/shop.prisma", import.meta.url), "utf8"));
+  importPrisma(read("./fixtures/shop.prisma"));
 const fields = (spec, name) =>
   Object.fromEntries(spec.collections.find((c) => c.name === name).fields.map((f) => [f.name, f]));
 

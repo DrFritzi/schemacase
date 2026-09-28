@@ -11,9 +11,10 @@
  * Each command loads only what it needs: an import never pulls in the layout engine, and a render
  * never needs a database driver.
  */
-import { readFileSync, realpathSync, writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { pathToFileURL } from "node:url";
+import { parseArgs as parse } from "node:util";
+import { isMain } from "./entry.mjs";
 
 const USAGE = [
   "usage: schemacase <spec.json> [--proposal <spec.json>] [-o page.html]",
@@ -22,62 +23,51 @@ const USAGE = [
   "       schemacase diff <current.json> <proposed.json> [-o review.md] [--fail-on-unaccounted]",
 ].join("\n");
 
-/** Flags that take a value, and the key each one fills. */
-const FLAGS = { "-o": "out", "--out": "out", "--proposal": "proposal", "--schema": "schema" };
-/** Flags that stand alone. */
-const SWITCHES = { "--fail-on-unaccounted": "failOnUnaccounted" };
-
 function scan(argv) {
-  const flags = {};
-  const positional = [];
-  for (let i = 0; i < argv.length; i += 1) {
-    if (SWITCHES[argv[i]]) {
-      flags[SWITCHES[argv[i]]] = true;
-    } else if (FLAGS[argv[i]]) {
-      flags[FLAGS[argv[i]]] = argv[i + 1] ?? "";
-      i += 1;
-    } else {
-      positional.push(argv[i]);
-    }
+  try {
+    return parse({
+      args: argv,
+      allowPositionals: true,
+      options: {
+        out: { type: "string", short: "o" },
+        proposal: { type: "string" },
+        schema: { type: "string" },
+        "fail-on-unaccounted": { type: "boolean" },
+      },
+    });
+  } catch (error) {
+    throw new Error(`${error.message}\n${USAGE}`);
   }
-  return { flags, positional };
 }
 
 /** The render command's arguments. */
 export function parseArgs(argv) {
-  const { flags, positional } = scan(argv);
-  const spec = positional[0] ?? "";
+  const { values, positionals: [spec] } = scan(argv);
   if (!spec) throw new Error(USAGE);
-  return {
-    spec,
-    html: flags.out || spec.replace(/\.json$/i, "") + ".html",
-    proposal: flags.proposal ?? "",
-  };
+  return { spec, html: values.out || spec.replace(/\.json$/i, "") + ".html", proposal: values.proposal ?? "" };
 }
 
 /** The import command's arguments: `import <source> <input>`. */
 export function parseImportArgs(argv) {
-  const { flags, positional } = scan(argv);
-  const [source, input] = positional;
+  const { values, positionals: [source, input] } = scan(argv);
   if (!["prisma", "postgres"].includes(source) || !input) throw new Error(USAGE);
-  return { source, input, out: flags.out ?? "", schema: flags.schema || "public" };
+  return { source, input, out: values.out ?? "", schema: values.schema || "public" };
 }
 
 /** The diff command's arguments. */
 export function parseDiffArgs(argv) {
-  const { flags, positional } = scan(argv);
-  const [current, proposed] = positional;
+  const { values, positionals: [current, proposed] } = scan(argv);
   if (!current || !proposed) throw new Error(USAGE);
-  return { current, proposed, out: flags.out ?? "", failOnUnaccounted: flags.failOnUnaccounted === true };
+  return { current, proposed, out: values.out ?? "", failOnUnaccounted: values["fail-on-unaccounted"] === true };
 }
 
 const here = (p) => resolve(process.cwd(), p);
+const readJson = (p) => JSON.parse(readFileSync(here(p), "utf8"));
 
 async function render(argv) {
   const { spec, html, proposal } = parseArgs(argv);
   const { renderHtml } = await import("./render.mjs");
-  const read = (p) => JSON.parse(readFileSync(here(p), "utf8"));
-  writeFileSync(here(html), await renderHtml(read(spec), proposal ? read(proposal) : null), "utf8");
+  writeFileSync(here(html), await renderHtml(readJson(spec), proposal ? readJson(proposal) : null), "utf8");
   console.log(`wrote ${here(html)}`);
 }
 
@@ -104,8 +94,7 @@ async function importSpec(argv) {
 async function diff(argv) {
   const { current, proposed, out, failOnUnaccounted } = parseDiffArgs(argv);
   const { diffMarkdown } = await import("./markdown.mjs");
-  const read = (p) => JSON.parse(readFileSync(here(p), "utf8"));
-  const review = diffMarkdown(read(current), read(proposed));
+  const review = diffMarkdown(readJson(current), readJson(proposed));
   if (out) writeFileSync(here(out), review.markdown, "utf8");
   else process.stdout.write(review.markdown);
   if (failOnUnaccounted && review.unaccounted.length) {
@@ -123,19 +112,7 @@ export async function main(argv) {
   return render(argv);
 }
 
-/**
- * Run only when started as a program, not when imported by the tests. Installed, the program is
- * reached through a symlink in node_modules/.bin, so compare the resolved path.
- */
-function isEntryPoint() {
-  try {
-    return import.meta.url === pathToFileURL(realpathSync(process.argv[1] ?? "")).href;
-  } catch {
-    return false;
-  }
-}
-
-if (isEntryPoint()) {
+if (isMain(import.meta.url)) {
   try {
     await main(process.argv.slice(2));
   } catch (error) {

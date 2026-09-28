@@ -11,7 +11,6 @@ import { diffSpecs, slice, unaccounted } from "./diff.mjs";
 
 
 const MARK = { added: "+", removed: "−", changed: "~" };
-const WORD = { added: "added", removed: "removed", changed: "changed" };
 
 export function fieldShape(field) {
   if (!field) return "";
@@ -40,13 +39,13 @@ function fieldRow(collection, field) {
 function collectionHeadline(entry) {
   const fields = (entry.to ?? entry.from)?.fields ?? [];
   return `<p class="d-head d-${entry.status}"><b>${MARK[entry.status]}</b> collection
-    <code>${esc(entry.name)}</code> <i>${WORD[entry.status]}</i>, ${fields.length} fields</p>`;
+    <code>${esc(entry.name)}</code> <i>${entry.status}</i>, ${fields.length} fields</p>`;
 }
 
 function operationBlock(entry) {
   if (entry.status !== "changed") {
     return `<p class="d-head d-${entry.status}"><b>${MARK[entry.status]}</b> operation
-      <code>${esc(entry.name)}</code> <i>${WORD[entry.status]}</i></p>`;
+      <code>${esc(entry.name)}</code> <i>${entry.status}</i></p>`;
   }
   const rows = entry.inputs.map((i) => fieldRow(entry.name, i)).join("");
   const summary =
@@ -59,7 +58,7 @@ function operationBlock(entry) {
 
 function linkBlock(entry) {
   return `<p class="d-head d-${entry.status}"><b>${MARK[entry.status]}</b> relationship
-    <code>${esc(entry.name)}</code> <i>${WORD[entry.status]}</i></p>`;
+    <code>${esc(entry.name)}</code> <i>${entry.status}</i></p>`;
 }
 
 function card(change, diff) {

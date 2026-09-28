@@ -3,7 +3,7 @@
  * the result is a file you open.
  */
 import { esc } from "./esc.mjs";
-import { normalizeSpec } from "./spec.mjs";
+import { countUnjustified, normalizeSpec } from "./spec.mjs";
 import { toDot, areaId, sysId } from "./dot.mjs";
 import { renderDot } from "./graphviz.mjs";
 import { viewerScript } from "./viewer.mjs";
@@ -15,14 +15,6 @@ import { renderProposals } from "./proposal.mjs";
  * A group is authored, so it can name a table or an operation that is not there. The canvas draws
  * what exists and would say nothing about the rest, so the page says it once.
  */
-/** Columns with neither a reason nor a requirement behind them. */
-function unjustified(spec) {
-  return spec.collections.reduce(
-    (n, c) => n + c.fields.filter((f) => !f.why && !f.usedBy.length).length,
-    0
-  );
-}
-
 function renderMissing(spec) {
   const tables = new Set(spec.collections.map((c) => c.name));
   const operations = new Set(spec.operations.map((o) => o.name));
@@ -57,7 +49,7 @@ export async function renderHtml(input, proposedInput = null) {
     `${spec.links.length} relationships`,
     `${spec.operations.length} ${spec.operationsLabel}`,
     `${spec.collections.reduce((n, c) => n + c.fields.filter((f) => f.document).length, 0)} documents`,
-    `${unjustified(spec)} unjustified`,
+    `${countUnjustified(spec)} unjustified`,
   ].join(" · ");
 
   // The page is the diagram. Everything else is either chrome in the rail or one click away in

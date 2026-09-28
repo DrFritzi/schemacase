@@ -5,7 +5,7 @@
  *
  * Kept free of the renderer's imports so it runs with no dependencies installed.
  */
-import { normalizeSpec } from "./spec.mjs";
+import { countUnjustified, normalizeSpec } from "./spec.mjs";
 import { diffSpecs, slice, unaccounted } from "./diff.mjs";
 import { fieldShape } from "./proposal.mjs";
 
@@ -49,9 +49,6 @@ function section(change, diff) {
   ].filter(Boolean).join("\n\n");
 }
 
-const unjustified = (spec) =>
-  spec.collections.reduce((n, c) => n + c.fields.filter((f) => !f.why && !f.usedBy.length).length, 0);
-
 /**
  * @param {object} currentInput the spec as it is
  * @param {object} proposedInput the spec as proposed, optionally with a `changes` list
@@ -66,7 +63,7 @@ export function diffMarkdown(currentInput, proposedInput) {
   const diff = diffSpecs(current, proposed);
   const loose = unaccounted(diff, changes);
   const changed = Boolean(diff.collections.length || diff.operations.length || diff.links.length);
-  const [before, after] = [unjustified(current), unjustified(proposed)];
+  const [before, after] = [countUnjustified(current), countUnjustified(proposed)];
 
   const summary = changed
     ? [

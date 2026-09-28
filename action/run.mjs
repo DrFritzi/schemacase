@@ -8,10 +8,10 @@
  *
  * Plain Node with fetch and git, nothing to install, so the step is fast on any runner.
  */
-import { appendFileSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
+import { appendFileSync, readFileSync, writeFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { join } from "node:path";
-import { pathToFileURL } from "node:url";
+import { isMain } from "../src/entry.mjs";
 import { MARKER, diffMarkdown } from "../src/markdown.mjs";
 
 /**
@@ -128,15 +128,7 @@ async function main() {
   }
 }
 
-const entry = (() => {
-  try {
-    return import.meta.url === pathToFileURL(realpathSync(process.argv[1] ?? "")).href;
-  } catch {
-    return false;
-  }
-})();
-
-if (entry) {
+if (isMain(import.meta.url)) {
   try {
     await main();
   } catch (error) {

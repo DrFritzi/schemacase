@@ -47,6 +47,21 @@ function normalizeNotes(notes) {
   return notes;
 }
 
+const str = (value, fallback = "") => String(value ?? fallback);
+const strs = (values) => (values ?? []).map(String);
+
+/** The name of something that must have one, or a failure that says where it was missing. */
+function nameOf(item, message) {
+  if (!item?.name) fail(message);
+  return String(item.name);
+}
+
+/** The two ends of a link or a flow. */
+function ends(item, what) {
+  if (!item?.from || !item?.to) fail(`${what} needs both from and to`);
+  return { from: String(item.from), to: String(item.to) };
+}
+
 /**
  * `why` and `usedBy` are the case for a column existing: why the value is kept at all and in this
  * shape, and which requirement needs it. Both are optional in the format and deliberately not
@@ -56,56 +71,49 @@ function normalizeNotes(notes) {
  * An empty value on the field falls through to the note rather than blocking it: an importer
  * writes `"why": ""` on every column, and that means "not yet", not "deliberately nothing".
  */
-function normalizeField(field, where, notes = {}, collection = "") {
-  if (!field?.name) fail(`${where} has a field without a name`);
-  const note = noteFor(notes, collection, field.name);
-  const usedBy = field.usedBy?.length ? field.usedBy : note?.usedBy ?? [];
+function normalizeField(field, where, notes, collection) {
+  const name = nameOf(field, `${where} has a field without a name`);
+  const note = noteFor(notes, collection, name);
   return {
-    name: String(field.name),
-    type: String(field.type ?? ""),
+    name,
+    type: str(field.type),
     key: field.key === true,
     required: field.required === true,
     document: field.document === true,
-    why: String(field.why || note?.why || ""),
-    usedBy: usedBy.map(String),
+    why: str(field.why || note?.why),
+    usedBy: strs(field.usedBy?.length ? field.usedBy : note?.usedBy),
   };
 }
 
 function normalizeCollection(collection, notes) {
-  if (!collection?.name) fail("a collection has no name");
-  const where = `collection "${collection.name}"`;
+  const name = nameOf(collection, "a collection has no name");
   return {
-    name: String(collection.name),
-    fields: (collection.fields ?? []).map((f) => normalizeField(f, where, notes, collection.name)),
+    name,
+    fields: (collection.fields ?? []).map((f) => normalizeField(f, `collection "${name}"`, notes, name)),
   };
 }
 
 function normalizeOperation(operation) {
-  if (!operation?.name) fail("an operation has no name");
+  const name = nameOf(operation, "an operation has no name");
   return {
-    name: String(operation.name),
-    summary: String(operation.summary ?? ""),
-    inputs: (operation.inputs ?? []).map((input) => {
-      if (!input?.name) fail(`operation "${operation.name}" has an input without a name`);
-      return {
-        name: String(input.name),
-        type: String(input.type ?? ""),
-        required: input.required === true,
-      };
-    }),
+    name,
+    summary: str(operation.summary),
+    inputs: (operation.inputs ?? []).map((input) => ({
+      name: nameOf(input, `operation "${name}" has an input without a name`),
+      type: str(input.type),
+      required: input.required === true,
+    })),
   };
 }
 
 function normalizeLink(link) {
-  if (!link?.from || !link?.to) fail("a link needs both from and to");
   return {
-    from: String(link.from),
-    to: String(link.to),
+    ...ends(link, "a link"),
     strong: link.strong === true,
     // Whether the child may exist without the parent — the difference between "exactly one" and
     // "zero or one" where the relationship meets the parent in crow's foot notation.
     optional: link.optional === true,
-    via: String(link.via ?? ""),
+    via: str(link.via),
   };
 }
 
@@ -113,29 +121,33 @@ const SYSTEM_KINDS = new Set(["external", "internal", "store"]);
 
 /** A system is anything that is not a store of this model: a client, a service, a database. */
 function normalizeSystem(system) {
-  if (!system?.name) fail("a system has no name");
-  const kind = String(system.kind ?? "internal");
+  const name = nameOf(system, "a system has no name");
+  const kind = str(system.kind, "internal");
   if (!SYSTEM_KINDS.has(kind)) {
-    fail(`system "${system.name}" has kind "${kind}", expected one of ${[...SYSTEM_KINDS].join(", ")}`);
+    fail(`system "${name}" has kind "${kind}", expected one of ${[...SYSTEM_KINDS].join(", ")}`);
   }
-  return { name: String(system.name), kind, blurb: String(system.blurb ?? "") };
+  return { name, kind, blurb: str(system.blurb) };
 }
 
 /** Data crossing between a system and an area, or between two systems. */
 function normalizeFlow(flow) {
-  if (!flow?.from || !flow?.to) fail("a flow needs both from and to");
-  return { from: String(flow.from), to: String(flow.to), label: String(flow.label ?? "") };
+  return { ...ends(flow, "a flow"), label: str(flow.label) };
 }
 
 function normalizeGroup(group) {
-  if (!group?.name) fail("a group has no name");
   return {
-    name: String(group.name),
-    blurb: String(group.blurb ?? ""),
-    collections: (group.collections ?? []).map(String),
-    operations: (group.operations ?? []).map(String),
+    name: nameOf(group, "a group has no name"),
+    blurb: str(group.blurb),
+    collections: strs(group.collections),
+    operations: strs(group.operations),
   };
 }
+
+/** A column with neither a reason nor a requirement behind it: an item on the work list. */
+export const isUnjustified = (field) => !field.why && !field.usedBy.length;
+
+export const countUnjustified = (spec) =>
+  spec.collections.reduce((n, c) => n + c.fields.filter(isUnjustified).length, 0);
 
 /**
  * Reject a spec that cannot be drawn, and fill in what the emitter left out, so the renderer
@@ -159,9 +171,7 @@ export function normalizeSpec(spec) {
     if (!known.has(link.to)) fail(`link points to unknown collection "${link.to}"`);
   }
 
-  const text = Object.fromEntries(
-    Object.entries(TEXT).map(([key, fallback]) => [key, String(spec[key] ?? fallback)])
-  );
+  const text = Object.fromEntries(Object.entries(TEXT).map(([key, fallback]) => [key, str(spec[key], fallback)]));
 
   return {
     ...text,

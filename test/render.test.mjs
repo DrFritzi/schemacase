@@ -1,14 +1,11 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { Script } from "node:vm";
 import { renderHtml } from "../src/render.mjs";
 import { toDot } from "../src/dot.mjs";
 import { normalizeSpec } from "../src/spec.mjs";
 import { parseArgs } from "../src/cli.mjs";
-
-const shop = () =>
-  JSON.parse(readFileSync(new URL("../example/shop.json", import.meta.url), "utf8"));
+import { shop } from "./helpers.mjs";
 
 test("the page says what the spec says, not what the renderer thinks", async () => {
   const html = await renderHtml(shop());

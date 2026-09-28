@@ -1,12 +1,9 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { diffMarkdown, MARKER } from "../src/markdown.mjs";
 import { upsertComment, specAt } from "../action/run.mjs";
 import { parseDiffArgs } from "../src/cli.mjs";
-
-const shop = () =>
-  JSON.parse(readFileSync(new URL("../example/shop.json", import.meta.url), "utf8"));
+import { shop } from "./helpers.mjs";
 
 function proposed() {
   const spec = shop();
