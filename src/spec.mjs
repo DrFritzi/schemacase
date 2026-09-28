@@ -31,30 +31,52 @@ function requireArray(spec, key) {
 }
 
 /**
+ * A note keyed by column name applies to every collection that has one (`*.project_id`), an exact
+ * key wins over it (`orders.status`). Structural columns carry the same reason in every table, and
+ * writing it once is the difference between one statement and one chance per table to disagree.
+ */
+function noteFor(notes, collection, field) {
+  return notes[`${collection}.${field}`] ?? notes[`*.${field}`] ?? null;
+}
+
+function normalizeNotes(notes) {
+  if (notes === undefined) return {};
+  if (!notes || typeof notes !== "object" || Array.isArray(notes)) {
+    fail('"fieldNotes" must be an object keyed "collection.field" or "*.field"');
+  }
+  return notes;
+}
+
+/**
  * `why` and `usedBy` are the case for a column existing: why the value is kept at all and in this
  * shape, and which requirement needs it. Both are optional in the format and deliberately not
  * defaulted to anything reassuring — a column with neither is reported as unjustified rather than
  * quietly passing, because that report is the work list.
+ *
+ * An empty value on the field falls through to the note rather than blocking it: an importer
+ * writes `"why": ""` on every column, and that means "not yet", not "deliberately nothing".
  */
-function normalizeField(field, where) {
+function normalizeField(field, where, notes = {}, collection = "") {
   if (!field?.name) fail(`${where} has a field without a name`);
+  const note = noteFor(notes, collection, field.name);
+  const usedBy = field.usedBy?.length ? field.usedBy : note?.usedBy ?? [];
   return {
     name: String(field.name),
     type: String(field.type ?? ""),
     key: field.key === true,
     required: field.required === true,
     document: field.document === true,
-    why: String(field.why ?? ""),
-    usedBy: (field.usedBy ?? []).map(String),
+    why: String(field.why || note?.why || ""),
+    usedBy: usedBy.map(String),
   };
 }
 
-function normalizeCollection(collection) {
+function normalizeCollection(collection, notes) {
   if (!collection?.name) fail("a collection has no name");
   const where = `collection "${collection.name}"`;
   return {
     name: String(collection.name),
-    fields: (collection.fields ?? []).map((f) => normalizeField(f, where)),
+    fields: (collection.fields ?? []).map((f) => normalizeField(f, where, notes, collection.name)),
   };
 }
 
@@ -128,7 +150,8 @@ export function normalizeSpec(spec) {
     fail(`unsupported version ${JSON.stringify(spec.schemacase)}, expected ${SPEC_VERSION}`);
   }
 
-  const collections = requireArray(spec, "collections").map(normalizeCollection);
+  const notes = normalizeNotes(spec.fieldNotes);
+  const collections = requireArray(spec, "collections").map((c) => normalizeCollection(c, notes));
   const known = new Set(collections.map((c) => c.name));
   const links = (spec.links ?? []).map(normalizeLink);
   for (const link of links) {

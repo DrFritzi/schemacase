@@ -60,6 +60,7 @@ falls back to a neutral default, so a spec can start small and grow.
 | `title` | the window's name and the first line of the rail |
 | `collectionsLabel`, `operationsLabel` | what you call the two kinds of thing — *tables*, *endpoints*, whatever fits |
 | `collections[]` | `{ name, fields: [{ name, type, key, required, document, why, usedBy }] }` |
+| `fieldNotes` | `{ "collection.field": { why, usedBy }, "*.field": { … } }` — the case for a column, stated once; see below |
 | `links[]` | `{ from, to, via, strong, optional }` — `via` names the foreign-key columns, `strong` means the child does not outlive its parent, `optional` that it may exist without one |
 | `operations[]` | `{ name, summary, inputs: [{ name, type, required }] }` |
 | `groups[]` | `{ name, blurb, collections: [], operations: [] }` — the editorial grouping |
@@ -79,6 +80,29 @@ They are written by hand, and they are what turns a schema picture into a system
 this shape, and which requirement needs it. Neither is defaulted to anything reassuring — a column
 with neither is marked `?` on the canvas, says so in the panel, and is counted in the rail. That
 count is the work list. A schema nobody can justify column by column is a schema nobody decided.
+
+### Stating a reason once: `fieldNotes`
+
+Some columns are structural: `tenant_id`, `created_at`, `project_id` carry the same reason in
+every table they appear in. Writing that reason into every field is one chance per table to
+disagree, so a spec may state it once:
+
+```json
+{
+  "schemacase": 1,
+  "fieldNotes": {
+    "*.tenant_id": { "why": "Scopes every row to one shop.", "usedBy": ["SHP-TEN-01"] },
+    "orders.status": { "why": "Where the parcel is, as the customer sees it.", "usedBy": ["SHP-ORD-03"] }
+  },
+  "collections": [ "…" ]
+}
+```
+
+A key is either exact (`orders.status`) or a column name across every collection (`*.tenant_id`).
+The exact key wins over the wildcard, and whatever the field says itself wins over both. An empty
+`why` or `usedBy` on the field counts as unsaid, so a note fills in an imported spec whose columns
+all start out empty — which makes `fieldNotes` the natural place to keep the authored half when
+the collections are re-generated from a database.
 
 A spec that cannot be drawn is rejected with the reason (`unknown collection "x"`,
 `unsupported version 2`) rather than rendered half-way.

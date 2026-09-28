@@ -96,3 +96,11 @@ test("two changes touching one collection do not show each other's rows", async 
   assert.equal(card("P1").includes("price_cents"), false, "P1 must not show P2's rows");
   assert.equal(card("P2").includes("ship_to"), false, "P2 must not show P1's rows");
 });
+
+test("field notes justify the proposed model too", async () => {
+  const proposed = proposeShop();
+  proposed.fieldNotes = { "orders.ship_to": { why: "One line on the delivery note." } };
+  const spec = normalizeSpec(proposed);
+  const shipTo = spec.collections.find((c) => c.name === "orders").fields.find((f) => f.name === "ship_to");
+  assert.equal(shipTo.why, "One line on the delivery note.");
+});
