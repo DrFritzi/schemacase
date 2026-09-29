@@ -47,7 +47,7 @@
     "example": "node src/cli.mjs example/shop.json --proposal example/proposed.json -o example/shop.html"
   },
   "dependencies": {
-    "@viz-js/viz": "^3.29.0"
+    "@viz-js/viz": "^3.30.0"
   },
   "peerDependencies": {
     "pg": ">=8"
