@@ -10,17 +10,16 @@
  * Rendered to SVG when the page is built, not in the browser: the reader gets a picture, not a
  * megabyte of layout engine.
  */
-
-const ESC = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" };
-const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ESC[c]);
+import { esc } from "./esc.mjs";
+import { isUnjustified } from "./spec.mjs";
 
 /** DOT ids must be plain, and must survive round-tripping back to a name on click. */
-export const tableId = (name) => `t_${String(name).replace(/[^A-Za-z0-9_]/g, "_")}`;
-export const portId = (name) => `p_${String(name).replace(/[^A-Za-z0-9_]/g, "_")}`;
-export const opId = (name) => `o_${String(name).replace(/[^A-Za-z0-9_]/g, "_")}`;
+const plain = (prefix) => (name) => `${prefix}_${String(name).replace(/[^A-Za-z0-9_]/g, "_")}`;
+export const tableId = plain("t");
+export const portId = plain("p");
+export const opId = plain("o");
 export const areaId = (i) => `g${i}`;
 export const sysId = (i) => `s${i}`;
-
 const COLORS = {
   line: "#c9d2dc",
   ink: "#16202c",
@@ -36,13 +35,12 @@ const COLORS = {
 function fieldRow(field, foreign) {
   const marks = [field.key ? "PK" : "", foreign.has(field.name) ? "FK" : ""].filter(Boolean).join(",");
   const bg = field.document ? ` BGCOLOR="${COLORS.doc}"` : "";
-  const unjustified = !field.why && !field.usedBy.length;
   const nameColor = field.required ? COLORS.ink : COLORS.muted;
   return (
     `<TR><TD PORT="${portId(field.name)}" ALIGN="LEFT"${bg}>` +
     `<FONT COLOR="${COLORS.accent}" POINT-SIZE="9">${esc(marks || " ")}</FONT></TD>` +
     `<TD ALIGN="LEFT"${bg}><FONT COLOR="${nameColor}">${esc(field.name)}` +
-    `${unjustified ? ` <FONT COLOR="${COLORS.warn}">?</FONT>` : ""}</FONT></TD>` +
+    `${isUnjustified(field) ? ` <FONT COLOR="${COLORS.warn}">?</FONT>` : ""}</FONT></TD>` +
     `<TD ALIGN="LEFT"${bg}><FONT COLOR="${COLORS.muted}" POINT-SIZE="9">${esc(field.type)}</FONT></TD></TR>`
   );
 }
@@ -101,43 +99,40 @@ const SYSTEM_SHAPE = {
   internal: `shape=box, style="rounded,filled", fillcolor="#eef1f5", color="${COLORS.muted}"`,
 };
 
+function operationNode(operation) {
+  return (
+    `    ${opId(operation.name)} [id="${opId(operation.name)}", label="${esc(operation.name)}", ` +
+    `shape=box, style="rounded,filled", fillcolor="#ffffff", color="${COLORS.accent}", ` +
+    `fontcolor="${COLORS.accent}", fontsize=10, margin="0.08,0.04"];`
+  );
+}
+
+function cluster(id, label, color, body, out) {
+  out.push(
+    `  subgraph cluster_${id} {`,
+    `    id="${id}"; label="${esc(label)}"; labelloc="t"; labeljust="l";`,
+    `    style="filled,rounded"; fillcolor="${COLORS.area}"; color="${color}";`,
+    `    fontsize=13; fontcolor="${COLORS.muted}"; margin=14;`,
+    ...body,
+    "  }"
+  );
+}
+
+/** One cluster per group, and a warning-coloured one for any collection nobody grouped. */
 function areas(spec, out) {
   const foreign = foreignColumns(spec.links);
+  const find = (list, names) => names.map((n) => list.find((x) => x.name === n)).filter(Boolean);
+  const node = (table) => tableNode(table, foreign.get(table.name) ?? new Set());
   const placed = new Set();
   spec.groups.forEach((group, i) => {
-    const tables = group.collections
-      .map((n) => spec.collections.find((c) => c.name === n))
-      .filter(Boolean);
-    const operations = group.operations
-      .map((n) => spec.operations.find((o) => o.name === n))
-      .filter(Boolean);
+    const tables = find(spec.collections, group.collections);
+    const operations = find(spec.operations, group.operations);
     if (!tables.length && !operations.length) return;
-    out.push(`  subgraph cluster_${areaId(i)} {`);
-    out.push(`    id="${areaId(i)}"; label="${esc(group.name)}"; labelloc="t"; labeljust="l";`);
-    out.push(`    style="filled,rounded"; fillcolor="${COLORS.area}"; color="${COLORS.line}";`);
-    out.push(`    fontsize=13; fontcolor="${COLORS.muted}"; margin=14;`);
-    for (const table of tables) {
-      placed.add(table.name);
-      out.push(tableNode(table, foreign.get(table.name) ?? new Set()));
-    }
-    for (const operation of operations) {
-      out.push(
-        `    ${opId(operation.name)} [id="${opId(operation.name)}", label="${esc(operation.name)}", ` +
-          `shape=box, style="rounded,filled", fillcolor="#ffffff", color="${COLORS.accent}", ` +
-          `fontcolor="${COLORS.accent}", fontsize=10, margin="0.08,0.04"];`
-      );
-    }
-    out.push("  }");
+    for (const table of tables) placed.add(table.name);
+    cluster(areaId(i), group.name, COLORS.line, [...tables.map(node), ...operations.map(operationNode)], out);
   });
-
   const loose = spec.collections.filter((c) => !placed.has(c.name));
-  if (loose.length) {
-    out.push(`  subgraph cluster_gx {`);
-    out.push(`    id="gx"; label="Unplaced"; labelloc="t"; labeljust="l";`);
-    out.push(`    style="filled,rounded"; fillcolor="${COLORS.area}"; color="${COLORS.warn}";`);
-    for (const table of loose) out.push(tableNode(table, foreign.get(table.name) ?? new Set()));
-    out.push("  }");
-  }
+  if (loose.length) cluster("gx", "Unplaced", COLORS.warn, loose.map(node), out);
 }
 
 /** Flows may name an area, a system or a single table; resolve all three to a node to point at. */

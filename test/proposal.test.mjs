@@ -1,12 +1,9 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { renderHtml } from "../src/render.mjs";
 import { diffSpecs, unaccounted } from "../src/diff.mjs";
 import { normalizeSpec } from "../src/spec.mjs";
-
-const shop = () =>
-  JSON.parse(readFileSync(new URL("../example/shop.json", import.meta.url), "utf8"));
+import { shop } from "./helpers.mjs";
 
 /** Swap a document field for two scalars, the shape most proposals take. */
 function proposeShop() {

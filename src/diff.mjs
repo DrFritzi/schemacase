@@ -105,7 +105,7 @@ export function slice(diff, affects = {}) {
 
   return {
     collections: diff.collections
-      .filter((c) => collections.has(c.name) || (entryFields(c) ?? []).some((f) => fields.has(`${c.name}.${f.name}`)))
+      .filter((c) => collections.has(c.name) || (c.fields ?? []).some((f) => fields.has(`${c.name}.${f.name}`)))
       .map(keepFields)
       .filter((c) => c.status !== "changed" || c.fields.length),
     operations: diff.operations.filter((o) => operations.has(o.name)),
@@ -113,10 +113,6 @@ export function slice(diff, affects = {}) {
       (l) => collections.has(l.from?.from ?? l.to?.from) || collections.has(l.from?.to ?? l.to?.to)
     ),
   };
-}
-
-function entryFields(entry) {
-  return entry.fields ?? [];
 }
 
 /**

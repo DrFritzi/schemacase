@@ -1,5 +1,4 @@
 import js from "@eslint/js";
-import globals from "globals";
 
 export default [
   { ignores: ["node_modules/**", "example/*.html"] },
@@ -9,7 +8,7 @@ export default [
     languageOptions: {
       ecmaVersion: "latest",
       sourceType: "module",
-      globals: { ...globals.node, ...globals.es2022 },
+      globals: { console: "readonly", process: "readonly", fetch: "readonly", URL: "readonly", structuredClone: "readonly" },
     },
     rules: {
       "no-undef": "error",

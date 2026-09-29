@@ -1,20 +1,19 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import Ajv from "ajv/dist/2020.js";
 import { importPrisma } from "../src/import/prisma.mjs";
 import { rowsToSpec } from "../src/import/postgres.mjs";
+import { read, readJson } from "./helpers.mjs";
 
-const read = (path) => JSON.parse(readFileSync(new URL(path, import.meta.url), "utf8"));
-const validate = new Ajv({ allErrors: true }).compile(read("../schema/schemacase.schema.json"));
+const validate = new Ajv({ allErrors: true }).compile(readJson("../schema/schemacase.schema.json"));
 const check = (spec) => (validate(spec) ? [] : validate.errors.map((e) => `${e.instancePath} ${e.message}`));
 
 test("the example passes the published JSON Schema", () => {
-  assert.deepEqual(check(read("../example/shop.json")), []);
+  assert.deepEqual(check(readJson("../example/shop.json")), []);
 });
 
 test("what the importers write passes it too", () => {
-  const prisma = importPrisma(readFileSync(new URL("./fixtures/shop.prisma", import.meta.url), "utf8"));
+  const prisma = importPrisma(read("./fixtures/shop.prisma"));
   assert.deepEqual(check(prisma), []);
   const pg = rowsToSpec({
     columns: [{ table_name: "t", column_name: "id", data_type: "jsonb", udt_name: "jsonb", is_nullable: "NO" }],
@@ -25,7 +24,7 @@ test("what the importers write passes it too", () => {
 
 test("a proposal with changes and field notes passes", () => {
   const spec = {
-    ...read("../example/shop.json"),
+    ...readJson("../example/shop.json"),
     fieldNotes: { "*.id": { why: "Addresses one row." }, "orders.shipping": { usedBy: ["SHP-ORD-04"] } },
     changes: [{ id: "P1", title: "t", why: "w", cost: "c", affects: { collections: ["orders"], fields: ["orders.x"] } }],
   };
@@ -33,7 +32,7 @@ test("a proposal with changes and field notes passes", () => {
 });
 
 test("it catches what the renderer would reject or silently ignore", () => {
-  const base = read("../example/shop.json");
+  const base = readJson("../example/shop.json");
   assert.notDeepEqual(check({ ...base, schemacase: 2 }), [], "wrong version");
   assert.notDeepEqual(check({ ...base, fieldNotes: { status: { why: "x" } } }), [], "note key without a dot");
   const typo = structuredClone(base);
