@@ -17,21 +17,31 @@ import { isUnjustified } from "./spec.mjs";
 const plain = (prefix) => (name) => `${prefix}_${String(name).replace(/[^A-Za-z0-9_]/g, "_")}`;
 export const tableId = plain("t");
 export const portId = plain("p");
+/** The same row's last cell: its east side is the table's right edge, where a key leaves. */
+export const endPortId = plain("q");
 export const opId = plain("o");
 export const areaId = (i) => `g${i}`;
 export const sysId = (i) => `s${i}`;
-const COLORS = {
-  line: "#c9d2dc",
-  ink: "#16202c",
-  muted: "#5a6875",
-  head: "#e6eef4",
-  headKey: "#dceef0",
-  accent: "#0e7c86",
-  warn: "#9a6a15",
-  doc: "#f6ecd8",
-  area: "#f7f9fb",
+/**
+ * Every colour in the diagram, for both themes. Graphviz bakes colours into the finished SVG, so
+ * the SVG carries the light values and the stylesheet re-points each one at a variable: switching
+ * theme is a class change, not a re-render, and a colour missing here would stay light in the dark
+ * theme (a test checks that every paint in a drawn diagram is listed).
+ */
+export const PALETTE = {
+  light: {
+    line: "#c9d2dc", ink: "#16202c", muted: "#5a6875", head: "#dceef0", accent: "#0e7c86",
+    warn: "#8f6010", doc: "#f6ecd8", area: "#f7f9fb", surface: "#ffffff", panel: "#eef1f5",
+  },
+  dark: {
+    line: "#33414e", ink: "#e4eaf0", muted: "#8b9aa8", head: "#12333a", accent: "#3fb6c0",
+    warn: "#d9a441", doc: "#33280f", area: "#121a21", surface: "#161e26", panel: "#1f2a34",
+  },
 };
+const COLORS = PALETTE.light;
 
+// Graphviz rejects a label with an empty <FONT>, and then draws no table at all, so a cell that may
+// be empty (a column without a type, a row without marks) always holds at least a space.
 function fieldRow(field, foreign) {
   const marks = [field.key ? "PK" : "", foreign.has(field.name) ? "FK" : ""].filter(Boolean).join(",");
   const bg = field.document ? ` BGCOLOR="${COLORS.doc}"` : "";
@@ -41,7 +51,8 @@ function fieldRow(field, foreign) {
     `<FONT COLOR="${COLORS.accent}" POINT-SIZE="9">${esc(marks || " ")}</FONT></TD>` +
     `<TD ALIGN="LEFT"${bg}><FONT COLOR="${nameColor}">${esc(field.name)}` +
     `${isUnjustified(field) ? ` <FONT COLOR="${COLORS.warn}">?</FONT>` : ""}</FONT></TD>` +
-    `<TD ALIGN="LEFT"${bg}><FONT COLOR="${COLORS.muted}" POINT-SIZE="9">${esc(field.type)}</FONT></TD></TR>`
+    `<TD PORT="${endPortId(field.name)}" ALIGN="LEFT"${bg}>` +
+    `<FONT COLOR="${COLORS.muted}" POINT-SIZE="9">${esc(field.type || " ")}</FONT></TD></TR>`
   );
 }
 
@@ -49,7 +60,7 @@ function tableNode(collection, foreign) {
   const rows = collection.fields.map((f) => fieldRow(f, foreign)).join("");
   const label =
     `<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3" COLOR="${COLORS.line}">` +
-    `<TR><TD COLSPAN="3" BGCOLOR="${COLORS.headKey}" ALIGN="CENTER">` +
+    `<TR><TD COLSPAN="3" BGCOLOR="${COLORS.head}" ALIGN="CENTER">` +
     `<B>${esc(collection.name)}</B></TD></TR>${rows}</TABLE>>`;
   return `    ${tableId(collection.name)} [id="${tableId(collection.name)}", label=${label}];`;
 }
@@ -73,7 +84,7 @@ function foreignColumns(links) {
  * every composite key in a multi-tenant schema starts with it, so anchoring on it would draw the
  * same line many times into one row.
  */
-function edgeFor(link, byName) {
+function edgeFor(link, byName, index) {
   const child = byName.get(link.to);
   const parent = byName.get(link.from);
   if (!child || !parent) return "";
@@ -84,25 +95,27 @@ function edgeFor(link, byName) {
   const column = columns.find((c) => c !== "project_id") ?? columns[0];
   const parentKey = parent.fields.find((f) => f.key && f.name !== "project_id") ?? parent.fields[0];
   if (!column || !parentKey) return "";
-  // crow at the child (many), bar at the parent (exactly one), circle too where it may be absent.
-  const head = link.optional ? "odottee" : "tee";
+  // Drawn parent to child, out of the parent's right edge and into the child's left, which is the
+  // way the layout runs: the other way round every line had to loop around both tables. Bar at
+  // the parent (exactly one, or with a circle where it may be absent), crow's foot at the child.
+  const one = link.optional ? "odottee" : "tee";
   const style = link.strong ? `color="${COLORS.accent}"` : `color="${COLORS.muted}"`;
   return (
-    `  ${tableId(link.to)}:${portId(column)}:w -> ${tableId(link.from)}:${portId(parentKey.name)}:e ` +
-    `[dir=both, arrowtail=crow, arrowhead=${head}, ${style}];`
+    `  ${tableId(link.from)}:${endPortId(parentKey.name)}:e -> ${tableId(link.to)}:${portId(column)}:w ` +
+    `[id="l${index}", dir=both, arrowtail=${one}, arrowhead=crow, penwidth=1.3, ${style}];`
   );
 }
 
 const SYSTEM_SHAPE = {
   external: `shape=cds, fillcolor="${COLORS.doc}", color="${COLORS.warn}"`,
-  store: `shape=cylinder, fillcolor="${COLORS.headKey}", color="${COLORS.accent}"`,
-  internal: `shape=box, style="rounded,filled", fillcolor="#eef1f5", color="${COLORS.muted}"`,
+  store: `shape=cylinder, fillcolor="${COLORS.head}", color="${COLORS.accent}"`,
+  internal: `shape=box, style="rounded,filled", fillcolor="${COLORS.panel}", color="${COLORS.muted}"`,
 };
 
 function operationNode(operation) {
   return (
     `    ${opId(operation.name)} [id="${opId(operation.name)}", label="${esc(operation.name)}", ` +
-    `shape=box, style="rounded,filled", fillcolor="#ffffff", color="${COLORS.accent}", ` +
+    `shape=box, style="rounded,filled", fillcolor="${COLORS.surface}", color="${COLORS.accent}", ` +
     `fontcolor="${COLORS.accent}", fontsize=10, margin="0.08,0.04"];`
   );
 }
@@ -174,25 +187,25 @@ export function toDot(spec) {
   });
 
   const byName = new Map(spec.collections.map((c) => [c.name, c]));
-  for (const link of spec.links) {
-    const edge = edgeFor(link, byName);
+  spec.links.forEach((link, i) => {
+    const edge = edgeFor(link, byName, i);
     if (edge) out.push(edge);
-  }
+  });
 
   const targets = flowTargets(spec);
-  for (const flow of spec.flows) {
+  spec.flows.forEach((flow, i) => {
     const from = targets.get(flow.from);
     const to = targets.get(flow.to);
-    if (!from || !to) continue;
+    if (!from || !to) return;
     const ends = [
       from.cluster ? `ltail=${from.cluster}` : "",
       to.cluster ? `lhead=${to.cluster}` : "",
     ].filter(Boolean).join(", ");
     out.push(
-      `  ${from.node} -> ${to.node} [label="${esc(flow.label)}", style=dashed, constraint=false, ` +
-        `color="${COLORS.warn}", fontcolor="${COLORS.warn}", penwidth=1.2${ends ? ", " + ends : ""}];`
+      `  ${from.node} -> ${to.node} [id="f${i}", label="${esc(flow.label)}", style=dashed, constraint=false, ` +
+        `color="${COLORS.warn}", fontcolor="${COLORS.warn}", penwidth=1, arrowsize=0.7, class="flow"${ends ? ", " + ends : ""}];`
     );
-  }
+  });
 
   out.push("}");
   return out.join("\n");

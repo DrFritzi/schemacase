@@ -8,6 +8,7 @@
  */
 
 import { esc } from "./esc.mjs";
+import { opId, tableId } from "./dot.mjs";
 
 /** Turning a thing in the spec into the panel beside the canvas. The page gets the same `esc`. */
 const PANEL = `
@@ -19,7 +20,7 @@ const PANEL = `
     panel.innerHTML = '<header><h4>' + esc(title) + '</h4>' +
       '<button type="button" id="detail-close" aria-label="close">&times;</button></header>' + body;
     panel.hidden = false;
-    document.getElementById("detail-close").addEventListener("click", () => { panel.hidden = true; });
+    document.getElementById("detail-close").addEventListener("click", () => { panel.hidden = true; unpin(); });
   }
 
   function foreignOf(name) {
@@ -63,7 +64,7 @@ const PANEL = `
       rel("referenced by", SPEC.links.filter((l) => l.from === name).map((l) => l.to)) +
       '<ul class="fields">' + rows + '</ul>');
     for (const b of panel.querySelectorAll("[data-go]")) {
-      b.addEventListener("click", () => { showTable(b.dataset.go); focus(byId("t_" + b.dataset.go)); });
+      b.addEventListener("click", () => { showTable(b.dataset.go); focus(byId(tables.get(b.dataset.go).id)); });
     }
   }
 
@@ -152,6 +153,42 @@ const NAVIGATION = `
     draw();
   }
 
+  // The edges that belong to a node: a table's relationships, and the flows that name it, its
+  // area, or (for a system) the system itself. Pointing at one leaves those bright and fades the
+  // rest, which is what makes a crowded diagram followable; clicking keeps them lit.
+  function edgesOf(node) {
+    const name = nameOf.get(node.id) ?? (node.id[0] === "s" ? SPEC.systems[Number(node.id.slice(1))]?.name : "");
+    if (!name) return [];
+    const areas = SPEC.groups.filter((g) => g.collections.includes(name)).map((g) => g.name);
+    const ids = [];
+    SPEC.links.forEach((l, i) => { if (l.from === name || l.to === name) ids.push("l" + i); });
+    SPEC.flows.forEach((f, i) => {
+      if ([f.from, f.to].some((end) => end === name || areas.includes(end))) ids.push("f" + i);
+    });
+    return ids;
+  }
+
+  let pinned = [];
+  function light(ids) {
+    svg.classList.toggle("lit", ids.length > 0);
+    for (const edge of svg.querySelectorAll("g.edge")) edge.classList.toggle("hot", ids.includes(edge.id));
+  }
+  function unpin() { pinned = []; light(pinned); }
+
+  // auto follows the reader's system setting; light and dark override it, and the choice is kept.
+  function wireTheme() {
+    const root = document.documentElement, button = document.getElementById("theme");
+    const show = () => { button.textContent = "theme: " + (root.dataset.theme || "auto"); };
+    button.addEventListener("click", () => {
+      const order = ["auto", "light", "dark"];
+      const next = order[(order.indexOf(root.dataset.theme || "auto") + 1) % order.length];
+      if (next === "auto") delete root.dataset.theme; else root.dataset.theme = next;
+      try { localStorage.setItem("schemacase-theme", next); } catch (e) { /* private mode: not kept */ }
+      show();
+    });
+    show();
+  }
+
   // Opening the panel narrows the canvas, so a node near the right edge can end up behind it:
   // when that happens, bring the node to the middle, at the zoom the reader chose.
   function reveal(el) {
@@ -207,16 +244,21 @@ const NAVIGATION = `
       node.style.cursor = "pointer";
       node.addEventListener("click", (e) => {
         e.stopPropagation();
-        if (node.id.startsWith("t_")) showTable(node.id.slice(2));
-        else if (node.id.startsWith("o_")) showOperation(node.id.slice(2));
+        if (node.id.startsWith("t_")) showTable(nameOf.get(node.id));
+        else if (node.id.startsWith("o_")) showOperation(nameOf.get(node.id));
         else showSystem(Number(node.id.slice(1)));
+        pinned = edgesOf(node);
+        light(pinned);
         reveal(node);
       });
+      node.addEventListener("pointerenter", () => light(edgesOf(node)));
+      node.addEventListener("pointerleave", () => light(pinned));
     }
     wireCanvas();
+    wireTheme();
     document.getElementById("zoom-in").addEventListener("click", () => zoomBy(1.3));
     document.getElementById("zoom-out").addEventListener("click", () => zoomBy(1 / 1.3));
-    document.getElementById("zoom-fit").addEventListener("click", () => { fit(); panel.hidden = true; });
+    document.getElementById("zoom-fit").addEventListener("click", () => { fit(); panel.hidden = true; unpin(); });
     for (const button of document.querySelectorAll("[data-jump]")) {
       button.addEventListener("click", () => focus(byId(button.dataset.jump)));
     }
@@ -243,13 +285,18 @@ const json = (value) => JSON.stringify(value).replace(/</g, "\\u003c");
 export const viewerScript = (spec) => `
 (() => {
   const SPEC = ${json({
-    collections: spec.collections,
+    collections: spec.collections.map((c) => ({ ...c, id: tableId(c.name) })),
     links: spec.links,
-    operations: spec.operations,
+    operations: spec.operations.map((o) => ({ ...o, id: opId(o.name) })),
     systems: spec.systems,
+    flows: spec.flows,
+    groups: spec.groups,
   })};
   const tables = new Map(SPEC.collections.map((c) => [c.name, c]));
   const operations = new Map(SPEC.operations.map((o) => [o.name, o]));
+  // A node's id is its name with anything but letters and digits replaced, so a name with a space
+  // or a dash cannot be read back off it.
+  const nameOf = new Map([...SPEC.collections, ...SPEC.operations].map((x) => [x.id, x.name]));
 
   const panel = document.getElementById("detail");
   const svg = document.getElementById("graph");

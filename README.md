@@ -6,7 +6,10 @@
 
 **[Live demo](https://drfritzi.github.io/schemacase/)**, rendered from [`example/shop.json`](example/shop.json) and a proposed change to it, [`example/proposed.json`](example/proposed.json). Click a table, use the rail on the left, and open **Proposals**.
 
-[![A webshop's tables, endpoints and systems on one canvas. The orders table is open in the panel: each column shows why it exists and which requirement needs it, and the columns nobody has explained, total_cents, coupon_code and legacy_ref, are marked with a ?](docs/screenshot.png)](https://drfritzi.github.io/schemacase/)
+<a href="https://drfritzi.github.io/schemacase/"><picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshot-dark.png">
+  <img alt="A webshop's tables, endpoints and systems on one canvas. The orders table is open in the panel: each column shows why it exists and which requirement needs it, and the columns nobody has explained, total_cents, coupon_code and legacy_ref, are marked with a ?" src="docs/screenshot.png">
+</picture></a>
 
 Turns a **data-model spec** into one self-contained HTML page: a single diagram of the whole
 model — every store with every column, the operations that reach them, the systems around them,
@@ -46,13 +49,19 @@ See [`example/shop.json`](example/shop.json) for a complete spec: nine tables in
 ## The page
 
 The page *is* the diagram: it fills the window, and everything else is chrome. Drag to pan, the
-wheel zooms, and the rail on the left flies to an area or a system. Clicking a store, an
-operation or a system opens it in the panel beside the canvas; a store's relationships are
-clickable there too, so you can walk the model without hunting for the next box.
+wheel zooms (two fingers pinch), and the rail on the left flies to an area or a system. Clicking
+a store, an operation or a system opens it in the panel beside the canvas; a store's
+relationships are clickable there too, so you can walk the model without hunting for the next box.
 
-Relationships are drawn column to column — a foreign key runs from the column that holds it to
-the column it references, with crow's foot at the many end and a bar, or a circle for "may be
-absent", at the one end.
+Relationships are drawn column to column, from the parent to the child, the way the layout runs:
+a line leaves the key it points at on the table's right edge and arrives at the column that holds
+it on the left, with a bar at the parent (or a bar and a circle, for "may be absent") and a crow's
+foot at the child. Point at a table or a system and only its own lines stay bright while the rest
+fade back; click it and they stay lit while its panel is open. The dashed amber lines are flows:
+they annotate the model, so they sit back until you ask about them.
+
+The **theme** button at the bottom of the rail cycles *auto* (follow the system), *light* and
+*dark*, and remembers the choice.
 
 Graphviz does the layout when the page is written, so the output carries a finished picture
 rather than a layout engine: a few hundred KB, and no network at any point.

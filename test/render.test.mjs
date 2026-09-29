@@ -21,15 +21,17 @@ test("carries no trace of any particular project or stack", async () => {
   }
 });
 
-test("a foreign key is drawn from the column that holds it to the one it points at", async () => {
+test("a foreign key leaves the key it points at and arrives at the column that holds it", async () => {
   const spec = normalizeSpec({
     ...shop(),
     links: shop().links.map((l) => ({ ...l, via: l.to === "orders" ? "customer_id" : "sku" })),
   });
   const dot = toDot(spec);
   // Table-to-table lines cannot say which column; ports are the whole reason for Graphviz here.
-  assert.match(dot, /t_orders:p_customer_id:w -> t_customers:p_id:e/);
-  assert.match(dot, /arrowtail=crow/);
+  // The line runs the way the layout does, out of the parent's right edge (its last cell) and into
+  // the child's left: drawn the other way, every line looped around both tables.
+  assert.match(dot, /t_customers:q_id:e -> t_orders:p_customer_id:w/);
+  assert.match(dot, /arrowhead=crow/);
 });
 
 test("a nullable foreign key gets the zero-or-one end", async () => {
@@ -37,8 +39,8 @@ test("a nullable foreign key gets the zero-or-one end", async () => {
     l.from === "products" ? { ...l, via: "sku", optional: true } : { ...l, via: "customer_id" }
   );
   const dot = toDot(normalizeSpec({ ...shop(), links }));
-  assert.match(dot, /t_order_items:p_sku:w -> t_products:p_sku:e \[dir=both, arrowtail=crow, arrowhead=odottee/);
-  assert.match(dot, /arrowhead=tee,/);
+  assert.match(dot, /t_products:q_sku:e -> t_order_items:p_sku:w \[id="l\d", dir=both, arrowtail=odottee, arrowhead=crow/);
+  assert.match(dot, /arrowtail=tee,/);
 });
 
 test("every column is on the canvas, marked PK or FK", async () => {
@@ -64,7 +66,7 @@ test("areas become clusters and systems get a shape of their own", async () => {
   assert.match(dot, /id="g2"; label="Orders"/);
   assert.match(dot, /s0 \[id="s0", label="Till".*shape=cds/);
   assert.match(dot, /s1 \[id="s1", label="Postgres".*shape=cylinder/);
-  assert.match(dot, /s0 -> t_orders \[label="new order".*lhead=cluster_g2/);
+  assert.match(dot, /s0 -> t_orders \[id="f0", label="new order".*lhead=cluster_g2/);
 });
 
 test("a collection nobody placed still appears, in its own cluster", async () => {
@@ -82,7 +84,8 @@ test("escapes what it writes into the page", async () => {
     collectionsLabel: "<b>Tables</b>",
     collections: [{ name: "t", fields: [{ name: "c", type: "text" }] }],
   });
-  const page = html.split("<script>")[0];
+  // Only the markup: what the scripts say is tested where they are.
+  const page = html.split("<script>").map((part, i) => (i ? part.slice(part.indexOf("</script>") + 9) : part)).join("");
   assert.equal(page.includes("<b>Tables</b>"), false);
   assert.match(page, /&lt;\/title&gt;/);
   assert.match(page, /&lt;b&gt;Tables&lt;\/b&gt;/);
@@ -151,4 +154,15 @@ test("every script in the page is valid JavaScript", async () => {
   const scripts = html.split("<script>").slice(1).map((part) => part.split("</script>")[0]);
   assert.ok(scripts.length > 0);
   for (const code of scripts) assert.doesNotThrow(() => new Script(code));
+});
+
+test("a column without a type still gets its table drawn", async () => {
+  // type is optional in the format, and an empty label cell used to make Graphviz drop the table.
+  const html = await renderHtml({
+    schemacase: 1,
+    collections: [{ name: "t", fields: [{ name: "id", key: true }, { name: "note" }] }],
+  });
+  const table = html.split('id="t_t"')[1].split("</g>")[0];
+  assert.match(table, /<polygon/, "the table has cells");
+  assert.match(table, />note\s*</, "and its columns are on it");
 });

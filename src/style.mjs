@@ -1,14 +1,28 @@
+import { PALETTE } from "./dot.mjs";
+
+const vars = (theme) => Object.entries(PALETTE[theme]).map(([name, hex]) => `--c-${name}:${hex};`).join(" ");
+
+const DARK = `
+    color-scheme:dark;
+    --paper:#0f151b; --surface:#161e26; --ink:#e4eaf0; --muted:#8b9aa8; --line:#26313c;
+    --accent:#3fb6c0; --accent-soft:#10333a; --warn:#d9a441; --warn-soft:#33280f;
+    ${vars("dark")}`;
+
+// The drawn diagram keeps the light hex values Graphviz wrote; these rules hand each one to the
+// theme. A CSS rule beats a presentation attribute, so no attribute needs rewriting.
+const DIAGRAM = Object.entries(PALETTE.light)
+  .map(([name, hex]) => `#graph [fill="${hex}"]{fill:var(--c-${name})} #graph [stroke="${hex}"]{stroke:var(--c-${name})}`)
+  .join("\n  ");
+
 /**
  * One stylesheet, inlined into the output. Colours are declared once as tokens on `:root` and
  * only redefined for dark, so the page holds up whether the reader's browser is set to light,
  * dark, or has made no choice at all.
  */
-const DARK = `
-    --paper:#0f151b; --surface:#161e26; --ink:#e4eaf0; --muted:#8b9aa8; --line:#26313c;
-    --accent:#3fb6c0; --accent-soft:#10333a; --warn:#d9a441; --warn-soft:#33280f;`;
-
 export const STYLE = `
   :root {
+    color-scheme:light;
+    ${vars("light")}
     --paper:#f4f6f9; --surface:#fff; --ink:#16202c; --muted:#5a6875; --line:#d8dee6;
     --accent:#0e7c86; --accent-soft:#dceef0; --warn:#9a6a15; --warn-soft:#f6ecd8;
     --mono:ui-monospace,"SFMono-Regular","Cascadia Mono",Menlo,Consolas,monospace;
@@ -44,6 +58,7 @@ export const STYLE = `
   .rail button:hover{border-color:var(--accent);color:var(--accent)}
   .rail button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   .rail .tool{color:var(--muted)}
+  @media(min-width:900px){.rail #theme{margin-top:auto}}
   .rail .external{border-left:3px solid var(--warn)}
   .rail .store{border-left:3px solid var(--accent)}
   .rail .internal{border-left:3px solid var(--muted)}
@@ -51,6 +66,13 @@ export const STYLE = `
     touch-action:none;user-select:none}
   .canvas:active{cursor:grabbing}
   .canvas svg{display:block;width:100%;height:100%}
+  ${DIAGRAM}
+  /* Flows annotate the model rather than make it, so they sit back until they are asked about. */
+  .canvas svg .edge.flow{opacity:.6}
+  /* Pointing at a table or system: its own edges stay, the rest fade back. */
+  .canvas svg.lit .edge{opacity:.12;transition:opacity .12s}
+  .canvas svg.lit .edge.hot{opacity:1}
+  .canvas svg.lit .edge.hot path{stroke-width:2.4}
   /* Table cells are unfilled polygons, which SVG does not hit-test: without this only the text
      and the cell borders were clickable, and a click in the middle of a cell fell through. */
   .canvas .node polygon{pointer-events:all}
