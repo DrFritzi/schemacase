@@ -8,8 +8,10 @@ import { read, readJson } from "./helpers.mjs";
 const validate = new Ajv({ allErrors: true }).compile(readJson("../schema/schemacase.schema.json"));
 const check = (spec) => (validate(spec) ? [] : validate.errors.map((e) => `${e.instancePath} ${e.message}`));
 
-test("the example passes the published JSON Schema", () => {
-  assert.deepEqual(check(readJson("../example/shop.json")), []);
+test("the example, its proposal and the test fixture pass the published JSON Schema", () => {
+  for (const file of ["../example/shop.json", "../example/proposed.json", "./fixtures/shop.json"]) {
+    assert.deepEqual(check(readJson(file)), [], file);
+  }
 });
 
 test("what the importers write passes it too", () => {
@@ -24,7 +26,7 @@ test("what the importers write passes it too", () => {
 
 test("a proposal with changes and field notes passes", () => {
   const spec = {
-    ...readJson("../example/shop.json"),
+    ...readJson("./fixtures/shop.json"),
     fieldNotes: { "*.id": { why: "Addresses one row." }, "orders.shipping": { usedBy: ["SHP-ORD-04"] } },
     changes: [{ id: "P1", title: "t", why: "w", cost: "c", affects: { collections: ["orders"], fields: ["orders.x"] } }],
   };
@@ -32,7 +34,7 @@ test("a proposal with changes and field notes passes", () => {
 });
 
 test("it catches what the renderer would reject or silently ignore", () => {
-  const base = readJson("../example/shop.json");
+  const base = readJson("./fixtures/shop.json");
   assert.notDeepEqual(check({ ...base, schemacase: 2 }), [], "wrong version");
   assert.notDeepEqual(check({ ...base, fieldNotes: { status: { why: "x" } } }), [], "note key without a dot");
   const typo = structuredClone(base);

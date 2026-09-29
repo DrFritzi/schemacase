@@ -61,6 +61,8 @@ function linkBlock(entry) {
     <code>${esc(entry.name)}</code> <i>${entry.status}</i></p>`;
 }
 
+const count = (list, word) => (list.length ? `${list.length} ${word}${list.length === 1 ? "" : "s"}` : "");
+
 function card(change, diff) {
   const part = slice(diff, change.affects);
   // One table for the whole card, not one per collection: separate tables size their columns
@@ -76,9 +78,9 @@ function card(change, diff) {
     ...part.links.map(linkBlock),
   ].join("");
   const counts = [
-    part.collections.length ? `${part.collections.length} collections` : "",
-    part.operations.length ? `${part.operations.length} operations` : "",
-    part.links.length ? `${part.links.length} relationships` : "",
+    count(part.collections, "collection"),
+    count(part.operations, "operation"),
+    count(part.links, "relationship"),
   ].filter(Boolean).join(" · ");
   return `<article class="proposal" id="${esc(change.id)}">
       <header>

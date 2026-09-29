@@ -44,7 +44,7 @@
     "lint": "eslint . --max-warnings=0",
     "test": "node --test \"test/*.test.mjs\"",
     "quicktest": "pnpm run lint && pnpm test",
-    "example": "node src/cli.mjs example/shop.json -o example/shop.html"
+    "example": "node src/cli.mjs example/shop.json --proposal example/proposed.json -o example/shop.html"
   },
   "dependencies": {
     "@viz-js/viz": "^3.29.0"

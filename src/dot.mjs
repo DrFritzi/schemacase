@@ -189,7 +189,7 @@ export function toDot(spec) {
       to.cluster ? `lhead=${to.cluster}` : "",
     ].filter(Boolean).join(", ");
     out.push(
-      `  ${from.node} -> ${to.node} [label="${esc(flow.label)}", style=dashed, ` +
+      `  ${from.node} -> ${to.node} [label="${esc(flow.label)}", style=dashed, constraint=false, ` +
         `color="${COLORS.warn}", fontcolor="${COLORS.warn}", penwidth=1.2${ends ? ", " + ends : ""}];`
     );
   }

@@ -6,7 +6,18 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- Pan and zoom are built in instead of coming from the `svg-pan-zoom` library. Pages are about 40% smaller (70 KB to 42 KB) and the package has one runtime dependency, Graphviz. Wheel, drag, pinch, the zoom buttons and the rail behave as before; the view now also follows the canvas when the detail panel opens or closes.
+- Flows are drawn without taking part in the layout, which is left to the foreign keys.
+- The command line rejects a flag it does not know instead of taking it for a file name.
+- The example is a larger webshop with a proposal, and is what the live demo shows. The small one the tests used lives in `test/fixtures`.
+
 ### Fixed
+
+- Only the text and borders of a table were clickable; a click in the middle of a cell fell through to the area behind it.
+- A table clicked near the edge is brought into view instead of ending up behind the detail panel.
+- A proposal card listed a removed relationship that belonged to another change. A change that lists columns now owns a relationship through its foreign-key column only.
 
 - A `</script>` inside any spec text (a column's `why`, a system's blurb, …) ended the page script early and ran the rest as markup. The embedded spec is now escaped so it cannot leave its script element.
 

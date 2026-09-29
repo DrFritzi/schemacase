@@ -51,6 +51,9 @@ export const STYLE = `
     touch-action:none;user-select:none}
   .canvas:active{cursor:grabbing}
   .canvas svg{display:block;width:100%;height:100%}
+  /* Table cells are unfilled polygons, which SVG does not hit-test: without this only the text
+     and the cell borders were clickable, and a click in the middle of a cell fell through. */
+  .canvas .node polygon{pointer-events:all}
   .detail{grid-area:detail;border-top:1px solid var(--line);padding:14px 16px;overflow:auto;
     background:var(--paper);font-size:13px}
   @media(min-width:900px){

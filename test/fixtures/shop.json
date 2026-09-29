@@ -1,0 +1,273 @@
+{
+  "$schema": "../../schema/schemacase.schema.json",
+  "schemacase": 1,
+  "title": "Orders",
+  "collectionsLabel": "tables",
+  "operationsLabel": "endpoints",
+  "collections": [
+    {
+      "name": "customers",
+      "fields": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "key": true,
+          "required": true,
+          "why": "Addresses one customer. A uuid because the shop hands ids to the till before the row exists.",
+          "usedBy": [
+            "SHP-CUS-01"
+          ]
+        },
+        {
+          "name": "email",
+          "type": "text",
+          "required": true,
+          "why": "How an order confirmation reaches someone.",
+          "usedBy": [
+            "SHP-CUS-01"
+          ]
+        },
+        {
+          "name": "name",
+          "type": "text",
+          "required": true,
+          "why": "What to print on the delivery note.",
+          "usedBy": [
+            "SHP-CUS-01"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "products",
+      "fields": [
+        {
+          "name": "sku",
+          "type": "text",
+          "key": true,
+          "required": true,
+          "why": "The code the till scans; it is the identity the whole shop already uses, so nothing has to translate.",
+          "usedBy": [
+            "SHP-CAT-01"
+          ]
+        },
+        {
+          "name": "title",
+          "type": "text",
+          "required": true,
+          "why": "What a person sees in the list.",
+          "usedBy": [
+            "SHP-CAT-01"
+          ]
+        },
+        {
+          "name": "cents",
+          "type": "integer",
+          "required": true,
+          "why": "Integer cents, not a float: money that rounds is money that disagrees with the receipt.",
+          "usedBy": [
+            "SHP-CAT-02"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "orders",
+      "fields": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "key": true,
+          "required": true,
+          "why": "Addresses one order.",
+          "usedBy": [
+            "SHP-ORD-01"
+          ]
+        },
+        {
+          "name": "customer_id",
+          "type": "uuid",
+          "required": true,
+          "why": "Who ordered. Required, because an order with no customer cannot be delivered or refunded.",
+          "usedBy": [
+            "SHP-ORD-01"
+          ]
+        },
+        {
+          "name": "placed_at",
+          "type": "timestamptz",
+          "required": true,
+          "why": "When it was ordered, for the returns window.",
+          "usedBy": [
+            "SHP-ORD-03"
+          ]
+        },
+        {
+          "name": "shipping",
+          "type": "jsonb",
+          "document": true
+        }
+      ]
+    },
+    {
+      "name": "order_items",
+      "fields": [
+        {
+          "name": "order_id",
+          "type": "uuid",
+          "key": true,
+          "required": true,
+          "why": "The order this line belongs to.",
+          "usedBy": [
+            "SHP-ORD-01"
+          ]
+        },
+        {
+          "name": "sku",
+          "type": "text",
+          "key": true,
+          "required": true,
+          "why": "What was bought.",
+          "usedBy": [
+            "SHP-ORD-01"
+          ]
+        },
+        {
+          "name": "quantity",
+          "type": "integer",
+          "required": true,
+          "why": "How many.",
+          "usedBy": [
+            "SHP-ORD-01"
+          ]
+        }
+      ]
+    }
+  ],
+  "links": [
+    {
+      "from": "customers",
+      "to": "orders",
+      "via": "customer_id",
+      "strong": true
+    },
+    {
+      "from": "orders",
+      "to": "order_items",
+      "via": "order_id",
+      "strong": true
+    },
+    {
+      "from": "products",
+      "to": "order_items",
+      "via": "sku",
+      "strong": false,
+      "optional": true
+    }
+  ],
+  "operations": [
+    {
+      "name": "place_order",
+      "summary": "Creates an order with its lines.",
+      "inputs": [
+        {
+          "name": "customer_id",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "items",
+          "type": "{ sku, quantity }[]",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "list_orders",
+      "summary": "A customer's orders, newest first.",
+      "inputs": [
+        {
+          "name": "customer_id",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "limit",
+          "type": "number",
+          "required": false
+        }
+      ]
+    },
+    {
+      "name": "list_products",
+      "summary": "Everything that is for sale.",
+      "inputs": []
+    }
+  ],
+  "groups": [
+    {
+      "name": "Customers",
+      "blurb": "Who orders. No customer, no order.",
+      "collections": [
+        "customers"
+      ],
+      "operations": []
+    },
+    {
+      "name": "Catalogue",
+      "blurb": "What is for sale, whether or not anyone ever ordered it.",
+      "collections": [
+        "products"
+      ],
+      "operations": [
+        "list_products"
+      ]
+    },
+    {
+      "name": "Orders",
+      "blurb": "An order and its lines belong together and disappear together.",
+      "collections": [
+        "orders",
+        "order_items"
+      ],
+      "operations": [
+        "place_order",
+        "list_orders"
+      ]
+    }
+  ],
+  "systems": [
+    {
+      "name": "Till",
+      "kind": "external",
+      "blurb": "Where orders are typed in."
+    },
+    {
+      "name": "Warehouse",
+      "kind": "internal",
+      "blurb": "Reconciles stock."
+    },
+    {
+      "name": "Nightly backup",
+      "kind": "store",
+      "blurb": "Takes a copy every night."
+    }
+  ],
+  "flows": [
+    {
+      "from": "Till",
+      "to": "Orders",
+      "label": "new order"
+    },
+    {
+      "from": "Catalogue",
+      "to": "Warehouse",
+      "label": "stock check"
+    },
+    {
+      "from": "Orders",
+      "to": "Nightly backup",
+      "label": "daily 02:00"
+    }
+  ]
+}

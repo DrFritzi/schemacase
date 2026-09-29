@@ -109,6 +109,10 @@
           "name": "attributes",
           "type": "jsonb",
           "document": true
+        },
+        {
+          "name": "weight_grams",
+          "type": "integer"
         }
       ]
     },
@@ -180,10 +184,6 @@
           "name": "created_at",
           "type": "timestamptz",
           "required": true
-        },
-        {
-          "name": "legacy_id",
-          "type": "text"
         }
       ]
     },
@@ -258,9 +258,10 @@
           "required": true
         },
         {
-          "name": "shipping_address_id",
-          "type": "uuid",
-          "why": "The address the parcel goes to. Empty for pickup orders.",
+          "name": "ship_to",
+          "type": "jsonb",
+          "document": true,
+          "why": "A copy of the address as it was when the order was placed. Editing an address later must not change where an old order went.",
           "usedBy": [
             "SHP-ORD-02"
           ]
@@ -280,16 +281,7 @@
           ]
         },
         {
-          "name": "total_cents",
-          "type": "integer",
-          "required": true
-        },
-        {
           "name": "coupon_code",
-          "type": "text"
-        },
-        {
-          "name": "legacy_ref",
           "type": "text"
         }
       ]
@@ -458,12 +450,6 @@
       "from": "customers",
       "to": "orders",
       "via": "customer_id"
-    },
-    {
-      "from": "addresses",
-      "to": "orders",
-      "via": "shipping_address_id",
-      "optional": true
     },
     {
       "from": "orders",
@@ -707,6 +693,49 @@
       "from": "Orders",
       "to": "Data warehouse",
       "label": "nightly export"
+    }
+  ],
+  "changes": [
+    {
+      "id": "P1",
+      "title": "Stop storing the order total",
+      "why": "It is the sum of the order's items and can drift from them. Nothing records why it is stored.",
+      "cost": "Every read of an order sums its items.",
+      "affects": {
+        "collections": [
+          "orders"
+        ],
+        "fields": [
+          "orders.total_cents"
+        ]
+      }
+    },
+    {
+      "id": "P2",
+      "title": "Copy the shipping address onto the order",
+      "why": "An address edited later must not change where an old order went.",
+      "cost": "Addresses are copied instead of referenced, and open orders need one migration.",
+      "affects": {
+        "collections": [
+          "orders"
+        ],
+        "fields": [
+          "orders.shipping_address_id",
+          "orders.ship_to"
+        ]
+      }
+    },
+    {
+      "id": "P3",
+      "title": "Drop the legacy columns",
+      "why": "Nothing reads them since the old shop was switched off.",
+      "cost": "A one-way change: the old ids cannot be recovered afterwards.",
+      "affects": {
+        "fields": [
+          "customers.legacy_id",
+          "orders.legacy_ref"
+        ]
+      }
     }
   ]
 }
